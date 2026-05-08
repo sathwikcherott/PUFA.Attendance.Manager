@@ -1,0 +1,252 @@
+Index: app/src/main/java/com/pufamanager/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/pufamanager/MainActivity.kt b/app/src/main/java/com/pufamanager/MainActivity.kt
+--- a/app/src/main/java/com/pufamanager/MainActivity.kt
++++ b/app/src/main/java/com/pufamanager/MainActivity.kt	(date 1778205269320)
+@@ -55,7 +55,7 @@
+     Attendance("Attendance", Icons.Default.Done),
+     Fees("Fees", Icons.Default.Star),
+     Players("Players", Icons.Default.Person),
+-    History("History", Icons.Default.DateRange)
++    Conflicts("Conflicts", Icons.Default.Warning)
+ }
+ 
+ class MainActivity : ComponentActivity() {
+@@ -142,7 +142,7 @@
+                                     onClick = { currentScreen = screen },
+                                     label = { Text(screen.title) },
+                                     icon = {
+-                                        if (screen == AppScreen.History && conflicts.isNotEmpty()) {
++                                        if (screen == AppScreen.Conflicts && conflicts.isNotEmpty()) {
+                                             BadgedBox(badge = { Badge { Text("${conflicts.size}") } }) {
+                                                 Icon(screen.icon, contentDescription = screen.title)
+                                             }
+@@ -329,49 +329,45 @@
+                                 attendanceDao = attendanceDao,
+                                 paymentDao = paymentDao
+                             )
+-                            AppScreen.History -> HistoryScreen(
+-                                players = players,
+-                                batches = batches,
+-                                allAttendance = allAttendance,
+-                                attendanceDao = attendanceDao,
+-                                paymentDao = paymentDao,
+-                                conflicts = conflicts,
+-                                onResolve = { conflict, useIncoming ->
+-                                    scope.launch {
+-                                        try {
+-                                            if (conflict.type == "ATTENDANCE") {
+-                                                attendanceDao.insertOrUpdateAttendance(
+-                                                    Attendance(
+-                                                        playerId = conflict.entityId,
+-                                                        date = conflict.identifier,
+-                                                        isPresent = if (useIncoming) conflict.incomingValue == "Present" else conflict.localValue == "Present",
+-                                                        lastUpdated = System.currentTimeMillis(),
+-                                                        deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
+-                                                    )
+-                                                )
+-                                            } else if (conflict.type == "PAYMENT") {
+-                                                val amountStr = if (useIncoming) conflict.incomingValue.removePrefix("₹") else conflict.localValue.removePrefix("₹")
+-                                                paymentDao.insertOrUpdatePayment(
+-                                                    Payment(
+-                                                        playerId = conflict.entityId,
+-                                                        month = conflict.identifier,
+-                                                        amount = amountStr.toDoubleOrNull() ?: 0.0,
+-                                                        date = todayDate,
+-                                                        lastUpdated = System.currentTimeMillis(),
+-                                                        deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
+-                                                    )
+-                                                )
+-                                            }
+-                                            conflictDao.deleteConflict(conflict)
+-                                            saveData()
+-                                            Toast.makeText(context, "Conflict Resolved", Toast.LENGTH_SHORT).show()
+-                                        } catch (e: Exception) {
+-                                            Toast.makeText(context, "Resolution failed", Toast.LENGTH_SHORT).show()
++                            AppScreen.Conflicts -> {
++                                ConflictResolutionScreen(
++                                    conflicts = conflicts,
++                                    onResolve = { conflict, useIncoming ->
++                                        scope.launch {
++                                            try {
++                                                if (conflict.type == "ATTENDANCE") {
++                                                    attendanceDao.insertOrUpdateAttendance(
++                                                        Attendance(
++                                                            playerId = conflict.entityId,
++                                                            date = conflict.identifier,
++                                                            isPresent = if (useIncoming) conflict.incomingValue == "Present" else conflict.localValue == "Present",
++                                                            lastUpdated = System.currentTimeMillis(),
++                                                            deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
++                                                        )
++                                                    )
++                                                } else if (conflict.type == "PAYMENT") {
++                                                    val amountStr = if (useIncoming) conflict.incomingValue.removePrefix("₹") else conflict.localValue.removePrefix("₹")
++                                                    paymentDao.insertOrUpdatePayment(
++                                                        Payment(
++                                                            playerId = conflict.entityId,
++                                                            month = conflict.identifier,
++                                                            amount = amountStr.toDoubleOrNull() ?: 0.0,
++                                                            date = todayDate,
++                                                            lastUpdated = System.currentTimeMillis(),
++                                                            deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
++                                                        )
++                                                    )
++                                                }
++                                                conflictDao.deleteConflict(conflict)
++                                                saveData()
++                                                Toast.makeText(context, "Conflict Resolved", Toast.LENGTH_SHORT).show()
++                                            } catch (e: Exception) {
++                                                Toast.makeText(context, "Resolution failed", Toast.LENGTH_SHORT).show()
++                                            }
+                                         }
+                                     }
+-                                },
+-                                onSave = { saveData() }
+-                            )
++                                )
++                            }
+                         }
+                     }
+                 }
+@@ -1676,6 +1672,7 @@
+     players: List<Player>,
+     batches: List<Batch>,
+     allAttendance: List<Attendance>,
++    allPayments: List<Payment>,
+     attendanceDao: com.pufamanager.data.dao.AttendanceDao,
+     paymentDao: com.pufamanager.data.dao.PaymentDao,
+     conflicts: List<SyncConflict>,
+@@ -1685,9 +1682,6 @@
+     var selectedSection by remember { mutableStateOf("Attendance") }
+     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
+     val sections = listOf("Attendance", "Payments", "Exports")
+-    
+-    // For Exports, we'll simulate history based on current batches/data
+-    val context = LocalContext.current
+ 
+     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+         Spacer(Modifier.height(24.dp))
+@@ -1695,18 +1689,16 @@
+         
+         if (conflicts.isNotEmpty()) {
+             Spacer(Modifier.height(12.dp))
+-            Surface(
+-                onClick = { /* Could navigate to a dedicated resolution section within history if needed, but for now we'll keep it simple */ },
+-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
++            ElevatedCard(
++                onClick = { /* Nav handled elsewhere or later */ },
++                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
+                 shape = MaterialTheme.shapes.medium,
+                 modifier = Modifier.fillMaxWidth()
+             ) {
+-                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
++                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error)
+                     Spacer(Modifier.width(12.dp))
+                     Text("${conflicts.size} Data Conflicts Detected", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
+-                    Spacer(Modifier.weight(1f))
+-                    Icon(Icons.Default.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.error)
+                 }
+             }
+         }
+@@ -1739,16 +1731,11 @@
+         Box(modifier = Modifier.weight(1f)) {
+             when (selectedSection) {
+                 "Attendance" -> AttendanceHistoryDashboard(players, batches, allAttendance, selectedBatch)
+-                "Payments" -> PaymentHistoryDashboard(players, batches, paymentDao, selectedBatch)
++                "Payments" -> PaymentHistoryDashboard(players, batches, allPayments, selectedBatch)
+                 "Exports" -> ExportHistoryDashboard(batches, selectedBatch)
+             }
+         }
+     }
+-    
+-    // Keep original resolution logic if needed or wrap it into a section
+-    if (selectedSection == "Attendance" && conflicts.isNotEmpty()) {
+-        // Resolve logic can stay here or be moved
+-    }
+ }
+ 
+ @Composable
+@@ -1758,7 +1745,7 @@
+     allAttendance: List<Attendance>,
+     selectedBatch: Batch?
+ ) {
+-    val groupedAttendance = remember(allAttendance, selectedBatch) {
++    val groupedAttendance = remember(allAttendance, selectedBatch, players, batches) {
+         allAttendance.groupBy { it.date }.mapValues { entry ->
+             val dailyRecs = entry.value
+             batches.filter { b -> selectedBatch == null || b.id == selectedBatch.id }.map { batch ->
+@@ -1775,7 +1762,7 @@
+     } else {
+         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+             groupedAttendance.forEach { (date, batchStats) ->
+-                item {
++                item(key = "date_$date") {
+                     Text(
+                         formatDisplayDate(date),
+                         style = MaterialTheme.typography.labelLarge,
+@@ -1783,12 +1770,12 @@
+                         modifier = Modifier.padding(vertical = 4.dp)
+                     )
+                 }
+-                items(batchStats) { (batch, present, total) ->
++                items(batchStats, key = { "att_${date}_${it.first.id}" }) { stats ->
+                     HistoryCard(
+-                        title = batch.name,
+-                        subtitle = "$present / $total Present",
+-                        progress = if (total > 0) present.toFloat() / total else 0f,
+-                        color = if (present == total) Color(0xFF2E7D32) else if (present < total / 2) MaterialTheme.colorScheme.error else Color(0xFFFBC02D)
++                        title = stats.first.name,
++                        subtitle = "${stats.second} / ${stats.third} Present",
++                        progress = if (stats.third > 0) stats.second.toFloat() / stats.third else 0f,
++                        color = if (stats.second == stats.third) Color(0xFF2E7D32) else if (stats.second < stats.third / 2) MaterialTheme.colorScheme.error else Color(0xFFFBC02D)
+                     )
+                 }
+             }
+@@ -1800,13 +1787,11 @@
+ fun PaymentHistoryDashboard(
+     players: List<Player>,
+     batches: List<Batch>,
+-    paymentDao: com.pufamanager.data.dao.PaymentDao,
++    allPayments: List<Payment>,
+     selectedBatch: Batch?
+ ) {
+-    val payments by paymentDao.getAllPaymentsListFlow().collectAsState(initial = emptyList())
+-    
+-    val groupedPayments = remember(payments, selectedBatch, players) {
+-        payments.groupBy { it.month }.mapValues { entry ->
++    val groupedPayments = remember(allPayments, selectedBatch, players, batches) {
++        allPayments.groupBy { it.month }.mapValues { entry ->
+             val monthlyRecs = entry.value
+             batches.filter { b -> selectedBatch == null || b.id == selectedBatch.id }.map { batch ->
+                 val batchPlayers = players.filter { it.batchId == batch.id }
+@@ -1822,7 +1807,7 @@
+     } else {
+         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+             groupedPayments.forEach { (month, batchStats) ->
+-                item {
++                item(key = "month_$month") {
+                     Text(
+                         month,
+                         style = MaterialTheme.typography.labelLarge,
+@@ -1830,12 +1815,12 @@
+                         modifier = Modifier.padding(vertical = 4.dp)
+                     )
+                 }
+-                items(batchStats) { (batch, paid, total) ->
++                items(batchStats, key = { "pay_${month}_${it.first.id}" }) { stats ->
+                     HistoryCard(
+-                        title = batch.name,
+-                        subtitle = "$paid / $total Paid",
+-                        progress = if (total > 0) paid.toFloat() / total else 0f,
+-                        color = if (paid == total) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
++                        title = stats.first.name,
++                        subtitle = "${stats.second} / ${stats.third} Paid",
++                        progress = if (stats.third > 0) stats.second.toFloat() / stats.third else 0f,
++                        color = if (stats.second == stats.third) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                     )
+                 }
+             }

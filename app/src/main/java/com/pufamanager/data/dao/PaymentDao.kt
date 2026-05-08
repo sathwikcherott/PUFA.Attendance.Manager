@@ -24,6 +24,9 @@ interface PaymentDao {
     @Query("SELECT * FROM Payment WHERE playerId = :playerId AND month = :month LIMIT 1")
     suspend fun getPaymentByPlayerAndMonth(playerId: Int, month: String): Payment?
 
+    @Query("SELECT * FROM Payment")
+    fun getAllPayments(): Flow<List<Payment>>
+
     @Update
     suspend fun updatePayment(payment: Payment)
 }

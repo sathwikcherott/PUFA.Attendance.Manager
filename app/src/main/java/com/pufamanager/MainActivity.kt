@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +39,14 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -47,8 +55,7 @@ enum class AppScreen(val title: String, val icon: androidx.compose.ui.graphics.v
     Attendance("Attendance", Icons.Default.Done),
     Fees("Fees", Icons.Default.Star),
     Players("Players", Icons.Default.Person),
-    History("History", Icons.Default.DateRange),
-    Conflicts("Conflicts", Icons.Default.Warning)
+    History("History", Icons.Default.DateRange)
 }
 
 class MainActivity : ComponentActivity() {
@@ -118,12 +125,13 @@ class MainActivity : ComponentActivity() {
                 val players by playerDao.getPlayers().collectAsState(initial = emptyList())
                 val batches by batchDao.getAllBatches().collectAsState(initial = emptyList())
                 val allAttendance by attendanceDao.getAllAttendance().collectAsState(initial = emptyList())
+                val allPayments by paymentDao.getAllPayments().collectAsState(initial = emptyList())
                 
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val currentMonth = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
                 
                 val attendanceToday = allAttendance.filter { it.date == todayDate }
-                val paymentsThisMonth by paymentDao.getPaymentsForMonth(currentMonth).collectAsState(initial = emptyList())
+                val paymentsThisMonth = allPayments.filter { it.month == currentMonth }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -133,16 +141,10 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = currentScreen == screen,
                                     onClick = { currentScreen = screen },
-                                    label = { 
-                                        if (screen == AppScreen.Conflicts && conflicts.isNotEmpty()) {
-                                            BadgedBox(badge = { Badge { Text("${conflicts.size}") } }) {
-                                                Text(screen.title)
-                                            }
-                                        } else {
-                                            Text(screen.title)
-                                        }
-                                    },
-                                    icon = { Icon(screen.icon, contentDescription = screen.title) }
+                                    label = { Text(screen.title) },
+                                    icon = {
+                                        Icon(screen.icon, contentDescription = screen.title)
+                                    }
                                 )
                             }
                         }
@@ -308,52 +310,29 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
+                                onUpdateBatch = { batch ->
+                                    scope.launch {
+                                        try {
+                                            batchDao.updateBatch(batch.copy(lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                            saveData()
+                                            Toast.makeText(context, "Batch Updated!", Toast.LENGTH_SHORT).show()
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Error updating batch", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
                                 attendanceDao = attendanceDao,
                                 paymentDao = paymentDao
                             )
                             AppScreen.History -> HistoryScreen(
                                 players = players,
+                                batches = batches,
                                 allAttendance = allAttendance,
+                                allPayments = allPayments,
                                 attendanceDao = attendanceDao,
                                 paymentDao = paymentDao,
+                                localDeviceId = localDeviceId,
                                 onSave = { saveData() }
-                            )
-                            AppScreen.Conflicts -> ConflictResolutionScreen(
-                                conflicts = conflicts,
-                                onResolve = { conflict, useIncoming ->
-                                    scope.launch {
-                                        try {
-                                            if (conflict.type == "ATTENDANCE") {
-                                                attendanceDao.insertOrUpdateAttendance(
-                                                    Attendance(
-                                                        playerId = conflict.entityId,
-                                                        date = conflict.identifier,
-                                                        isPresent = if (useIncoming) conflict.incomingValue == "Present" else conflict.localValue == "Present",
-                                                        lastUpdated = System.currentTimeMillis(),
-                                                        deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
-                                                    )
-                                                )
-                                            } else if (conflict.type == "PAYMENT") {
-                                                val amountStr = if (useIncoming) conflict.incomingValue.removePrefix("₹") else conflict.localValue.removePrefix("₹")
-                                                paymentDao.insertOrUpdatePayment(
-                                                    Payment(
-                                                        playerId = conflict.entityId,
-                                                        month = conflict.identifier,
-                                                        amount = amountStr.toDoubleOrNull() ?: 0.0,
-                                                        date = todayDate,
-                                                        lastUpdated = System.currentTimeMillis(),
-                                                        deviceId = if (useIncoming) conflict.incomingDeviceId else localDeviceId
-                                                    )
-                                                )
-                                            }
-                                            conflictDao.deleteConflict(conflict)
-                                            saveData()
-                                            Toast.makeText(context, "Conflict Resolved", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Resolution failed", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
                             )
                         }
                     }
@@ -438,6 +417,9 @@ fun DashboardScreen(
     onShare: () -> Unit,
     onImport: () -> Unit
 ) {
+    var isAttendanceExpanded by remember { mutableStateOf(false) }
+    var isDefaultersExpanded by remember { mutableStateOf(false) }
+    
     val playersCount = players.size
     val presentCount = attendanceToday.count { it.isPresent }
     val paidCount = paymentsThisMonth.size
@@ -492,7 +474,8 @@ fun DashboardScreen(
         if (lowAttendance.isNotEmpty()) {
             item {
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(), 
+                    onClick = { isAttendanceExpanded = !isAttendanceExpanded },
+                    modifier = Modifier.fillMaxWidth().animateContentSize(), 
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
                     shape = MaterialTheme.shapes.large
                 ) {
@@ -503,15 +486,16 @@ fun DashboardScreen(
                             Text("Low Attendance Warnings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         }
                         Spacer(Modifier.height(8.dp))
-                        lowAttendance.take(5).forEach { (name, percent) ->
+                        val displayList = if (isAttendanceExpanded) lowAttendance.sortedBy { it.first } else lowAttendance.take(5)
+                        displayList.forEach { (name, percent) ->
                             val color = if (percent < 50) MaterialTheme.colorScheme.error else Color(0xFFFBC02D)
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(name, style = MaterialTheme.typography.bodyMedium)
                                 Text("$percent%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color)
                             }
                         }
-                        if (lowAttendance.size > 5) {
-                            Text("...and ${lowAttendance.size - 5} others", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                        if (!isAttendanceExpanded && lowAttendance.size > 5) {
+                            Text("...and ${lowAttendance.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
                         }
                     }
                 }
@@ -523,21 +507,23 @@ fun DashboardScreen(
         if (unpaidPlayers.isNotEmpty()) {
             item {
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { isDefaultersExpanded = !isDefaultersExpanded },
+                    modifier = Modifier.fillMaxWidth().animateContentSize(),
                     shape = MaterialTheme.shapes.large
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Fee Defaulters (${unpaidPlayers.size})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(8.dp))
-                        unpaidPlayers.take(5).forEach { player ->
+                        val displayList = if (isDefaultersExpanded) unpaidPlayers.sortedBy { it.name } else unpaidPlayers.take(5)
+                        displayList.forEach { player ->
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
                                 Text("•", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(8.dp))
                                 Text(player.name, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
-                        if (unpaidPlayers.size > 5) {
-                            Text("...and ${unpaidPlayers.size - 5} others", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                        if (!isDefaultersExpanded && unpaidPlayers.size > 5) {
+                            Text("...and ${unpaidPlayers.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
                         }
                     }
                 }
@@ -616,6 +602,54 @@ fun DashboardChartCard(title: String, ratio: Float, label: String, color: Color)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun BatchSelector(
+    selectedBatch: Batch?,
+    batches: List<Batch>,
+    onBatchSelected: (Batch?) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String = "Filter by Batch",
+    showAllOption: Boolean = true
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedBatch?.name ?: if (showAllOption) "All Batches" else "Select Batch",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (showAllOption) {
+                DropdownMenuItem(
+                    text = { Text("All Batches") },
+                    onClick = {
+                        onBatchSelected(null)
+                        expanded = false
+                    }
+                )
+            }
+            batches.forEach { batch ->
+                DropdownMenuItem(
+                    text = { Text(batch.name) },
+                    onClick = {
+                        onBatchSelected(batch)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AttendanceScreen(
     players: List<Player>,
     batches: List<Batch>,
@@ -626,7 +660,6 @@ fun AttendanceScreen(
     onSave: (List<Pair<Int, Boolean?>>) -> Unit
 ) {
     var selectedBatch by remember { mutableStateOf(initialBatch ?: batches.firstOrNull()) }
-    var expanded by remember { mutableStateOf(false) }
     val attendanceMap = remember { mutableStateMapOf<Int, Boolean?>() }
     
     LaunchedEffect(batches) {
@@ -649,32 +682,15 @@ fun AttendanceScreen(
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            OutlinedTextField(
-                value = selectedBatch?.name ?: "Select Batch",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Filter by Batch") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                batches.forEach { batch ->
-                    DropdownMenuItem(
-                        text = { Text(batch.name) }, 
-                        onClick = { 
-                            selectedBatch = batch
-                            onBatchSelected(batch)
-                            expanded = false 
-                        }
-                    )
-                }
-            }
-        }
+        BatchSelector(
+            selectedBatch = selectedBatch,
+            batches = batches,
+            onBatchSelected = { 
+                selectedBatch = it
+                if (it != null) onBatchSelected(it)
+            },
+            showAllOption = false
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -688,7 +704,7 @@ fun AttendanceScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                val batchPlayers = players.filter { it.batchId == selectedBatch?.id }
+                val batchPlayers = players.filter { it.batchId == selectedBatch?.id }.sortedBy { it.name }
                 if (batchPlayers.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
@@ -773,9 +789,18 @@ fun FeesScreen(
     onTogglePayment: (Player, Boolean, Double) -> Unit
 ) {
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
-    var expanded by remember { mutableStateOf(false) }
-    var amountInput by remember { mutableStateOf("500") }
     var filterStatus by remember { mutableStateOf("All") } // All, Paid, Unpaid
+
+    val feeOptions = listOf("500", "1000", "Custom")
+    var selectedFeeOption by remember { mutableStateOf(feeOptions[0]) }
+    var customAmount by remember { mutableStateOf("500") }
+    var feeDropdownExpanded by remember { mutableStateOf(false) }
+
+    val currentFeeValue = if (selectedFeeOption == "Custom") {
+        customAmount.toDoubleOrNull() ?: 0.0
+    } else {
+        selectedFeeOption.toDouble()
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Monthly Fees", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -799,38 +824,59 @@ fun FeesScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BatchSelector(
+                selectedBatch = selectedBatch,
+                batches = batches,
+                onBatchSelected = { selectedBatch = it },
+                modifier = Modifier.weight(1f),
+                label = "Filter"
+            )
+
             ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-                modifier = Modifier.weight(1f)
+                expanded = feeDropdownExpanded,
+                onExpandedChange = { feeDropdownExpanded = !feeDropdownExpanded },
+                modifier = Modifier.width(120.dp)
             ) {
                 OutlinedTextField(
-                    value = selectedBatch?.name ?: "All Batches",
+                    value = selectedFeeOption,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Filter") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    label = { Text("Fee") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = feeDropdownExpanded) },
+                    modifier = Modifier.menuAnchor(),
                     shape = MaterialTheme.shapes.medium
                 )
-                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text("All Batches") }, onClick = { selectedBatch = null; expanded = false })
-                    batches.forEach { batch ->
-                        DropdownMenuItem(text = { Text(batch.name) }, onClick = { selectedBatch = batch; expanded = false })
+                ExposedDropdownMenu(
+                    expanded = feeDropdownExpanded,
+                    onDismissRequest = { feeDropdownExpanded = false }
+                ) {
+                    feeOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(if (option == "Custom") option else "₹$option") },
+                            onClick = {
+                                selectedFeeOption = option
+                                feeDropdownExpanded = false
+                            }
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            OutlinedTextField(
-                value = amountInput,
-                onValueChange = { amountInput = it },
-                label = { Text("Fee") },
-                modifier = Modifier.width(100.dp),
-                singleLine = true,
-                shape = MaterialTheme.shapes.medium,
-                prefix = { Text("₹") }
-            )
+
+            if (selectedFeeOption == "Custom") {
+                OutlinedTextField(
+                    value = customAmount,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) customAmount = it },
+                    label = { Text("Amount") },
+                    modifier = Modifier.width(100.dp),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    prefix = { Text("₹") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    )
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -843,12 +889,16 @@ fun FeesScreen(
             val filteredByBatch = if (selectedBatch == null) players else players.filter { it.batchId == selectedBatch?.id }
             
             val displayPlayers = when (filterStatus) {
-                "Paid" -> filteredByBatch.filter { p -> paymentsThisMonth.any { it.playerId == p.id } }
-                "Unpaid" -> filteredByBatch.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
+                "Paid" -> filteredByBatch.filter { p -> paymentsThisMonth.any { it.playerId == p.id } }.sortedBy { it.name }
+                "Unpaid" -> filteredByBatch.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }.sortedBy { it.name }
                 else -> filteredByBatch.sortedWith(compareBy<Player> { p ->
-                    // Unpaid first (not exempted AND no payment)
+                    // Paid first, then Unpaid, then Exempted
                     val isPaid = paymentsThisMonth.any { it.playerId == p.id }
-                    if (!p.isExempted && !isPaid) 0 else 1
+                    when {
+                        isPaid -> 0
+                        !p.isExempted -> 1
+                        else -> 2
+                    }
                 }.thenBy { it.name })
             }
 
@@ -910,7 +960,7 @@ fun FeesScreen(
                         }
                         Switch(
                             checked = isPaid,
-                            onCheckedChange = { onTogglePayment(player, it, amountInput.toDoubleOrNull() ?: 500.0) },
+                            onCheckedChange = { onTogglePayment(player, it, currentFeeValue) },
                             modifier = Modifier.scale(0.9f),
                             thumbContent = {
                                 if (isPaid) Icon(Icons.Default.Check, null, Modifier.size(12.dp))
@@ -1049,6 +1099,7 @@ fun PlayersScreen(
     onDeletePlayer: (Player) -> Unit,
     onAddBatch: (String) -> Unit,
     onDeleteBatch: (Batch) -> Unit,
+    onUpdateBatch: (Batch) -> Unit,
     attendanceDao: com.pufamanager.data.dao.AttendanceDao,
     paymentDao: com.pufamanager.data.dao.PaymentDao
 ) {
@@ -1056,9 +1107,26 @@ fun PlayersScreen(
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var viewingPlayerDetails by remember { mutableStateOf<Player?>(null) }
     var newBatchName by remember { mutableStateOf("") }
+    var showListMenu by remember { mutableStateOf(false) }
+
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedBatchFilter by remember { mutableStateOf<Batch?>(null) }
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
+    val filteredPlayers = remember(players, searchQuery, selectedBatchFilter) {
+        players.filter { player ->
+            val matchesSearch = if (searchQuery.isBlank()) true 
+                                else player.name.contains(searchQuery, ignoreCase = true)
+            val matchesBatch = if (selectedBatchFilter == null) true 
+                               else player.batchId == selectedBatchFilter?.id
+            matchesSearch && matchesBatch
+        }
+    }
 
     var playerToDelete by remember { mutableStateOf<Player?>(null) }
     var batchToDelete by remember { mutableStateOf<Batch?>(null) }
+    var batchToRename by remember { mutableStateOf<Batch?>(null) }
 
     // Confirmation Dialogs
     playerToDelete?.let { player ->
@@ -1091,33 +1159,167 @@ fun PlayersScreen(
         )
     }
 
+    batchToRename?.let { batch ->
+        var editedName by remember { mutableStateOf(batch.name) }
+        val isDuplicate = batches.any { it.name.equals(editedName, ignoreCase = true) && it.id != batch.id }
+
+        AlertDialog(
+            onDismissRequest = { batchToRename = null },
+            title = { Text("Rename Batch") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Batch Name") },
+                        singleLine = true,
+                        isError = editedName.isBlank() || isDuplicate,
+                        supportingText = {
+                            if (editedName.isBlank()) Text("Name cannot be empty")
+                            else if (isDuplicate) Text("Batch name already exists")
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateBatch(batch.copy(name = editedName))
+                        batchToRename = null
+                    },
+                    enabled = editedName.isNotBlank() && !isDuplicate
+                ) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { batchToRename = null }) { Text("Cancel") } }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), 
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
     ) {
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Manage Camp", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                Button(onClick = { showPlayerDialog = true }, shape = MaterialTheme.shapes.medium) {
-                    Icon(Icons.Default.Add, null)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Player")
+            Row(
+                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isSearchActive) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
+                            .focusRequester(focusRequester),
+                        placeholder = { Text("Search player name...") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                searchQuery = ""
+                                isSearchActive = false
+                            }) {
+                                Icon(Icons.Default.Close, "Close search")
+                            }
+                        },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
+                    LaunchedEffect(Unit) {
+                        focusRequester.requestFocus()
+                    }
+                } else {
+                    Text(
+                        "Manage Camp",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    IconButton(onClick = { isSearchActive = true }) {
+                        Icon(Icons.Default.Search, "Search", tint = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Box {
+                        OutlinedButton(
+                            onClick = { showListMenu = true },
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Icon(Icons.Default.List, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("List")
+                        }
+                        DropdownMenu(
+                            expanded = showListMenu,
+                            onDismissRequest = { showListMenu = false }
+                        ) {
+                            val context = LocalContext.current
+                            val scope = rememberCoroutineScope()
+                            batches.forEach { batch ->
+                                DropdownMenuItem(
+                                    text = { Text(batch.name) },
+                                    onClick = {
+                                        showListMenu = false
+                                        val batchPlayers = players.filter { it.batchId == batch.id }
+                                        scope.launch {
+                                            try {
+                                                val file = createBatchListPdf(context, batch, batchPlayers)
+                                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                    type = "application/pdf"
+                                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(android.content.Intent.createChooser(intent, "Share Player List"))
+                                            } catch (e: Exception) {
+                                                android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Button(onClick = { showPlayerDialog = true }, shape = MaterialTheme.shapes.medium) {
+                        Icon(Icons.Default.Add, null)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Player")
+                    }
                 }
             }
         }
 
         item { Text("Player Roster", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
 
-        if (players.isEmpty()) {
+        item {
+            BatchSelector(
+                selectedBatch = selectedBatchFilter,
+                batches = batches,
+                onBatchSelected = { selectedBatchFilter = it },
+                label = "Filter Players by Batch"
+            )
+        }
+
+        if (filteredPlayers.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                    Text("No players registered", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                    Text(
+                        if (searchQuery.isNotEmpty()) "No matches found" else "No players registered",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
         }
 
-        items(players, key = { "p_${it.id}" }) { player ->
+        items(filteredPlayers.sortedBy { it.name }, key = { "p_${it.id}" }) { player ->
             val bName = batches.find { it.id == player.batchId }?.name ?: "Unknown"
             val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
             
@@ -1190,6 +1392,9 @@ fun PlayersScreen(
                         Text("$playerCount players", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                     Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = { batchToRename = batch }) {
+                        Icon(Icons.Default.Edit, "Rename", tint = MaterialTheme.colorScheme.primary)
+                    }
                     IconButton(
                         onClick = { batchToDelete = batch },
                         enabled = playerCount == 0
@@ -1427,344 +1632,70 @@ fun PlayerDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HistoryScreen(
-    players: List<Player>,
-    allAttendance: List<Attendance>,
-    attendanceDao: com.pufamanager.data.dao.AttendanceDao,
-    paymentDao: com.pufamanager.data.dao.PaymentDao,
-    onSave: () -> Unit
-) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Attendance", "Payments")
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab, containerColor = MaterialTheme.colorScheme.surface, contentColor = MaterialTheme.colorScheme.primary) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
-                )
-            }
-        }
+fun createBatchListPdf(context: android.content.Context, batch: Batch, players: List<Player>): File {
+    val sortedPlayers = players.sortedBy { it.name }
+    val pdfDocument = PdfDocument()
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+    var page = pdfDocument.startPage(pageInfo)
+    var canvas = page.canvas
+    val paint = Paint()
+    var y = 50f
 
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            when (selectedTab) {
-                0 -> AttendanceHistoryView(players, attendanceDao, allAttendance, onSave)
-                1 -> PaymentHistoryView(players, paymentDao)
-            }
-        }
-    }
-}
+    // Header
+    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    paint.textSize = 20f
+    canvas.drawText("PUFA Manager Hub", 50f, y, paint)
+    y += 35f
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AttendanceHistoryView(
-    players: List<Player>,
-    attendanceDao: com.pufamanager.data.dao.AttendanceDao,
-    allAttendance: List<Attendance>,
-    onSave: () -> Unit
-) {
-    val context = LocalContext.current
-    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-    var selectedDate by remember { mutableStateOf(todayStr) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    paint.textSize = 14f
+    canvas.drawText("Batch: ${batch.name}", 50f, y, paint)
+    y += 30f
+
+    // Table Header
+    val startX = 50f
+    val endX = 545f
+    val nameColWidth = 350f
+    val rowHeight = 25f
+
+    paint.strokeWidth = 1f
+    paint.style = Paint.Style.STROKE
+    canvas.drawRect(startX, y, endX, y + rowHeight, paint)
+    canvas.drawLine(startX + nameColWidth, y, startX + nameColWidth, y + rowHeight, paint)
+
+    paint.style = Paint.Style.FILL
+    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    canvas.drawText("Player Name", startX + 10f, y + 18f, paint)
+    canvas.drawText("YOB", startX + nameColWidth + 10f, y + 18f, paint)
     
-    val attendanceMap = remember(allAttendance) {
-        allAttendance.groupBy { it.date }.mapValues { entry ->
-            entry.value.associate { it.playerId to (if (it.isPresent) "present" else "absent") }
+    y += rowHeight
+
+    // Table Rows
+    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+    sortedPlayers.forEach { player ->
+        if (y > 780) {
+            pdfDocument.finishPage(page)
+            page = pdfDocument.startPage(pageInfo)
+            canvas = page.canvas
+            y = 50f
+            // Redraw table header on new page if needed? (optional, keeping it simple)
         }
+        
+        paint.style = Paint.Style.STROKE
+        canvas.drawRect(startX, y, endX, y + rowHeight, paint)
+        canvas.drawLine(startX + nameColWidth, y, startX + nameColWidth, y + rowHeight, paint)
+        
+        paint.style = Paint.Style.FILL
+        canvas.drawText(player.name, startX + 10f, y + 18f, paint)
+        canvas.drawText(player.yearOfBirth.toString(), startX + nameColWidth + 10f, y + 18f, paint)
+        
+        y += rowHeight
     }
-    val dayAttendance = attendanceMap[selectedDate] ?: emptyMap()
 
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDate)?.time
-    )
-
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Button(
-            onClick = {
-                scope.launch {
-                    try {
-                        val report = generateAttendanceReportCsv(selectedDate, players, allAttendance)
-                        val file = File(context.cacheDir, "Attendance_Report_${selectedDate.substring(0, 7)}.csv")
-                        file.writeText(report)
-                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/csv"
-                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(android.content.Intent.createChooser(intent, "Export Report"))
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Export Monthly CSV")
-        }
-
-        OutlinedCard(
-            onClick = { showDatePicker = true },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text("Selected Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                    Text(selectedDate, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Default.DateRange, contentDescription = "Pick Date", tint = MaterialTheme.colorScheme.primary)
-            }
-        }
-
-        if (players.isNotEmpty()) {
-            val total = players.size
-            val present = dayAttendance.values.count { it == "present" }
-            val absent = dayAttendance.values.count { it == "absent" }
-            val percentage = if (total > 0) (present.toFloat() / total * 100).toInt() else 0
-            
-            val indicatorColor = when {
-                present == total -> Color(0xFF2E7D32)
-                present < total / 2 -> Color(0xFFD32F2F)
-                else -> Color(0xFFFBC02D)
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = indicatorColor.copy(alpha = 0.1f)),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    SummaryItem("Total", "$total")
-                    SummaryItem("Present", "$present")
-                    SummaryItem("Absent", "$absent")
-                    SummaryItem("Rate", "$percentage%")
-                }
-            }
-        }
-
-        if (showDatePicker) {
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        datePickerState.selectedDateMillis?.let {
-                            selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it))
-                        }
-                        showDatePicker = false
-                    }) { Text("OK") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-                }
-            ) {
-                DatePicker(state = datePickerState)
-            }
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (players.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No players registered", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-                    }
-                }
-            }
-            items(players, key = { "hist_att_${it.id}" }) { player ->
-                val status = dayAttendance[player.id]
-                val isPresent = status == "present"
-                
-                Card(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = if (status == "absent") 
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f))
-                             else CardDefaults.cardColors()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp, 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                player.name, 
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (status == "absent") MaterialTheme.colorScheme.error else Color.Unspecified
-                            )
-                            Text(
-                                text = when(status) {
-                                    "present" -> "Present"
-                                    "absent" -> "Absent"
-                                    else -> "Not Marked"
-                                },
-                                style = MaterialTheme.typography.labelSmall,
-                                color = when(status) {
-                                    "present" -> Color(0xFF2E7D32)
-                                    "absent" -> MaterialTheme.colorScheme.error
-                                    else -> MaterialTheme.colorScheme.outline
-                                }
-                            )
-                        }
-                        
-                        Switch(
-                            checked = isPresent,
-                            onCheckedChange = { checked ->
-                                scope.launch {
-                                    try {
-                                        attendanceDao.insertOrUpdateAttendance(
-                                            Attendance(
-                                                playerId = player.id,
-                                                date = selectedDate,
-                                                isPresent = checked,
-                                                lastUpdated = System.currentTimeMillis()
-                                            )
-                                        )
-                                        onSave()
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Update failed", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            thumbContent = {
-                                if (isPresent) Icon(Icons.Default.Check, null, Modifier.size(12.dp))
-                                else Icon(Icons.Default.Close, null, Modifier.size(12.dp))
-                            }
-                        )
-                    }
-                }
-            }
-        }
-    }
+    pdfDocument.finishPage(page)
+    val file = File(context.cacheDir, "${batch.name.replace(" ", "_")}_List.pdf")
+    pdfDocument.writeTo(FileOutputStream(file))
+    pdfDocument.close()
+    return file
 }
 
-@Composable
-fun SummaryItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(2.dp))
-        Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-fun generateAttendanceReportCsv(selectedDate: String, players: List<Player>, allAttendance: List<Attendance>): String {
-    val monthPrefix = selectedDate.substring(0, 7) // "yyyy-MM"
-    val monthAttendance = allAttendance.filter { it.date.startsWith(monthPrefix) }
-    
-    val recordedDates = monthAttendance.map { it.date }.distinct()
-    val totalDays = recordedDates.size
-
-    if (totalDays == 0) return "No attendance records found for this month."
-
-    val sb = StringBuilder()
-    sb.append("Player Name,Total Days,Present Days,Absent Days,Attendance Percentage\n")
-
-    players.forEach { player ->
-        val playerRecords = monthAttendance.filter { it.playerId == player.id }
-        val presentDays = playerRecords.count { it.isPresent }
-        val absentDays = totalDays - presentDays
-        val percentage = (presentDays.toFloat() / totalDays * 100).toInt()
-        sb.append("${player.name},$totalDays,$presentDays,$absentDays,$percentage%\n")
-    }
-
-    return sb.toString()
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PaymentHistoryView(
-    players: List<Player>,
-    paymentDao: com.pufamanager.data.dao.PaymentDao
-) {
-    val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
-    var selectedMonth by remember { mutableStateOf(currentMonthStr) }
-    var expanded by remember { mutableStateOf(false) }
-
-    val months = remember {
-        val list = mutableListOf<String>()
-        val cal = Calendar.getInstance()
-        val sdf = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-        repeat(6) {
-            list.add(sdf.format(cal.time))
-            cal.add(Calendar.MONTH, -1)
-        }
-        list
-    }
-
-    val paymentsForMonth by paymentDao.getPaymentsForMonth(selectedMonth).collectAsState(initial = emptyList())
-
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded }
-        ) {
-            OutlinedTextField(
-                value = selectedMonth,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Select Month") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                months.forEach { month ->
-                    DropdownMenuItem(text = { Text(month) }, onClick = { selectedMonth = month; expanded = false })
-                }
-            }
-        }
-
-        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (players.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No players registered", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
-                    }
-                }
-            }
-            items(players, key = { "hist_pay_${it.id}" }) { player ->
-                val payment = paymentsForMonth.find { it.playerId == player.id }
-                val isPaid = payment != null
-                
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = if (isPaid) 
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
-                             else CardDefaults.cardColors()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(player.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (payment != null) {
-                            Surface(color = MaterialTheme.colorScheme.primary, shape = MaterialTheme.shapes.extraSmall) {
-                                Text("Paid ₹${payment.amount}", color = Color.White, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), fontWeight = FontWeight.Bold)
-                            }
-                        } else {
-                            Text("Not Paid", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
