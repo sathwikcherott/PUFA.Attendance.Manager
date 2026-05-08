@@ -23,6 +23,7 @@ import com.pufamanager.data.entity.Batch
 import com.pufamanager.data.entity.Payment
 import com.pufamanager.data.entity.Player
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -103,7 +104,9 @@ fun HistoryScreen(
                     onSave = onSave
                 )
                 "Exports" -> ExportsSection(
+                    players = players,
                     batches = batches,
+                    allAttendance = allAttendance,
                     allPayments = allPayments
                 )
             }
@@ -114,7 +117,9 @@ fun HistoryScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportsSection(
+    players: List<Player>,
     batches: List<Batch>,
+    allAttendance: List<Attendance>,
     allPayments: List<Payment>
 ) {
     val context = LocalContext.current
@@ -132,6 +137,16 @@ fun ExportsSection(
         }
     }
 
+    fun shareFile(file: File) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(intent, "Share Attendance Reports"))
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -144,8 +159,24 @@ fun ExportsSection(
                 batches = batches,
                 months = months,
                 showMonth = true,
-                onExport = { _, _ ->
-                    Toast.makeText(context, "Attendance export coming soon", Toast.LENGTH_SHORT).show()
+                onExport = { batch, month ->
+                    if (batch == null || month == null) {
+                        Toast.makeText(context, "Please select batch and month", Toast.LENGTH_SHORT).show()
+                        return@ExportCard
+                    }
+                    try {
+                        val zipFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            ExportUtils.generateAttendanceZip(context, batch, month, players, allAttendance)
+                        }
+                        if (zipFile != null) {
+                            shareFile(zipFile)
+                            Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No attendance records found", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
         }
@@ -186,11 +217,13 @@ fun ExportCard(
     batches: List<Batch>,
     months: List<String>,
     showMonth: Boolean,
-    onExport: (Batch?, String?) -> Unit
+    onExport: suspend (Batch?, String?) -> Unit
 ) {
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     var selectedMonth by remember { mutableStateOf(months.firstOrNull()) }
     var monthExpanded by remember { mutableStateOf(false) }
+    var isExporting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -260,11 +293,26 @@ fun ExportCard(
             }
 
             Button(
-                onClick = { onExport(selectedBatch, selectedMonth) },
+                onClick = { 
+                    scope.launch {
+                        isExporting = true
+                        onExport(selectedBatch, selectedMonth)
+                        isExporting = false
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.medium,
+                enabled = !isExporting
             ) {
-                Text("Export")
+                if (isExporting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Export")
+                }
             }
         }
     }
