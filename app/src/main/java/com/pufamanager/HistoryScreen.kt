@@ -102,11 +102,169 @@ fun HistoryScreen(
                     localDeviceId = localDeviceId,
                     onSave = onSave
                 )
-                "Exports" -> Text(
-                    text = "Export History",
+                "Exports" -> ExportsSection(
+                    batches = batches,
+                    allPayments = allPayments
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExportsSection(
+    batches: List<Batch>,
+    allPayments: List<Payment>
+) {
+    val context = LocalContext.current
+    val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
+    val months = remember(allPayments) {
+        val list = allPayments.map { it.month }.distinct().toMutableList()
+        if (!list.contains(currentMonthStr)) list.add(0, currentMonthStr)
+        list.sortedWith { m1, m2 ->
+            try {
+                val sdf = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+                sdf.parse(m2)!!.compareTo(sdf.parse(m1)!!)
+            } catch (e: Exception) {
+                m2.compareTo(m1)
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
+    ) {
+        item {
+            ExportCard(
+                title = "Attendance Reports",
+                helperText = "Export daily attendance PDFs as ZIP",
+                batches = batches,
+                months = months,
+                showMonth = true,
+                onExport = { _, _ ->
+                    Toast.makeText(context, "Attendance export coming soon", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        item {
+            ExportCard(
+                title = "Payment Reports",
+                helperText = "Export payment reports as ZIP",
+                batches = batches,
+                months = months,
+                showMonth = true,
+                onExport = { _, _ ->
+                    Toast.makeText(context, "Payment export coming soon", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+
+        item {
+            ExportCard(
+                title = "Player List Export",
+                helperText = "Export player roster as PDF",
+                batches = batches,
+                months = emptyList(),
+                showMonth = false,
+                onExport = { _, _ ->
+                    Toast.makeText(context, "Player list export coming soon", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExportCard(
+    title: String,
+    helperText: String,
+    batches: List<Batch>,
+    months: List<String>,
+    showMonth: Boolean,
+    onExport: (Batch?, String?) -> Unit
+) {
+    var selectedBatch by remember { mutableStateOf<Batch?>(null) }
+    var selectedMonth by remember { mutableStateOf(months.firstOrNull()) }
+    var monthExpanded by remember { mutableStateOf(false) }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column {
+                Text(
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = helperText,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                BatchSelector(
+                    selectedBatch = selectedBatch,
+                    batches = batches,
+                    onBatchSelected = { selectedBatch = it },
+                    modifier = Modifier.weight(1f),
+                    label = "Batch",
+                    showAllOption = true
+                )
+
+                if (showMonth) {
+                    ExposedDropdownMenuBox(
+                        expanded = monthExpanded,
+                        onExpandedChange = { monthExpanded = !monthExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = selectedMonth ?: "Select Month",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Month") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            shape = MaterialTheme.shapes.medium
+                        )
+                        ExposedDropdownMenu(
+                            expanded = monthExpanded,
+                            onDismissRequest = { monthExpanded = false }
+                        ) {
+                            months.forEach { month ->
+                                DropdownMenuItem(
+                                    text = { Text(month) },
+                                    onClick = {
+                                        selectedMonth = month
+                                        monthExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button(
+                onClick = { onExport(selectedBatch, selectedMonth) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Export")
             }
         }
     }
