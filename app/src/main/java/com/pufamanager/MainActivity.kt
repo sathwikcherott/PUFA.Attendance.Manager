@@ -12,10 +12,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -27,6 +29,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -554,12 +557,141 @@ fun HomeScreen(
         
         item {
             val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
-            HomeChartCard("Today's Attendance", attendanceRatio, "${(attendanceRatio * 100).toInt()}% Present", MaterialTheme.colorScheme.primary)
+            val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
+            AttendanceHeroCard(
+                attendanceRatio = attendanceRatio,
+                presentCount = presentCount,
+                absentCount = playersCount - presentCount,
+                lastUpdated = lastUpdated
+            )
         }
 
         item {
             val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
             HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
+        }
+    }
+}
+
+@Composable
+fun AttendanceHeroCard(
+    attendanceRatio: Float,
+    presentCount: Int,
+    absentCount: Int,
+    lastUpdated: Long?,
+    sessionLabel: String = "All Batches Combined"
+) {
+    val cardBg = Color(0xFF2A1118)
+    val accentPink = Color(0xFFFF99C1)
+    val successGreen = Color(0xFF2CC55E)
+    val dangerRed = Color(0xFFEF4444)
+    val primaryText = Color(0xFFFFFFFF)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+
+    val animatedRatio by animateFloatAsState(targetValue = attendanceRatio, label = "ratio")
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column {
+                    Text(
+                        text = "Today's Session",
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = primaryText
+                        )
+                    )
+                    Text(
+                        text = sessionLabel,
+                        style = TextStyle(
+                            fontSize = 11.sp,
+                            color = accentPink.copy(alpha = 0.7f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "${(attendanceRatio * 100).toInt()}% Attendance",
+                style = TextStyle(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = primaryText
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LinearProgressIndicator(
+                progress = { animatedRatio },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = accentPink,
+                trackColor = dividerColor,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "$presentCount Present",
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = successGreen
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(24.dp)
+                        .background(dividerColor)
+                )
+
+                Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
+                    Text(
+                        text = "$absentCount Absent",
+                        style = TextStyle(
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = dangerRed
+                        )
+                    )
+                }
+            }
+
+            if (lastUpdated != null && lastUpdated > 0) {
+                Spacer(modifier = Modifier.height(20.dp))
+                val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastUpdated))
+                Text(
+                    text = "Last sync at $timeStr",
+                    style = TextStyle(
+                        fontSize = 11.sp,
+                        color = secondaryText.copy(alpha = 0.5f)
+                    )
+                )
+            }
         }
     }
 }
