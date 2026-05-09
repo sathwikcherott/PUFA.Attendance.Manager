@@ -1661,8 +1661,8 @@ fun PlayersScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), 
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(top = 20.dp, bottom = 48.dp)
     ) {
         item {
             Row(
@@ -1678,22 +1678,27 @@ fun PlayersScreen(
                             .weight(1f)
                             .padding(end = 8.dp)
                             .focusRequester(focusRequester),
-                        placeholder = { Text("Search player name...") },
-                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        placeholder = { Text("Search player name...", color = Color(0xFFA1A1AA), fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFFA1A1AA), modifier = Modifier.size(20.dp)) },
                         trailingIcon = {
                             IconButton(onClick = {
                                 searchQuery = ""
                                 isSearchActive = false
                             }) {
-                                Icon(Icons.Default.Close, "Close search")
+                                Icon(Icons.Default.Close, "Close search", tint = Color(0xFFA1A1AA), modifier = Modifier.size(20.dp))
                             }
                         },
                         singleLine = true,
-                        shape = MaterialTheme.shapes.medium,
+                        shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF2A1118),
+                            unfocusedContainerColor = Color(0xFF2A1118),
+                            focusedBorderColor = Color(0xFF3A2029),
+                            unfocusedBorderColor = Color(0xFF3A2029)
+                        ),
+                        textStyle = TextStyle(fontSize = 14.sp)
                     )
                     LaunchedEffect(Unit) {
                         focusRequester.requestFocus()
@@ -1701,42 +1706,66 @@ fun PlayersScreen(
                 } else {
                     Text(
                         "Manage Camp",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
+                        color = Color.White,
                         modifier = Modifier.weight(1f)
                     )
                     
-                    IconButton(onClick = { isSearchActive = true }) {
-                        Icon(Icons.Default.Search, "Search", tint = MaterialTheme.colorScheme.primary)
+                    Surface(
+                        onClick = { isSearchActive = true },
+                        color = Color(0xFF2A1118),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Search, "Search", tint = Color(0xFFFF99C1), modifier = Modifier.size(20.dp))
+                        }
                     }
 
-                    Button(onClick = { showPlayerDialog = true }, shape = MaterialTheme.shapes.medium) {
-                        Icon(Icons.Default.Add, null)
+                    Spacer(Modifier.width(8.dp))
+
+                    Button(
+                        onClick = { showPlayerDialog = true }, 
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(40.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D)),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Player")
+                        Text("Player", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
         }
 
-        item { Text("Player Roster", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+        item { 
+            Text(
+                "Player Roster", 
+                style = MaterialTheme.typography.labelLarge, 
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFA1A1AA)
+            ) 
+        }
 
         item {
             BatchSelector(
                 selectedBatch = selectedBatchFilter,
                 batches = batches,
                 onBatchSelected = { selectedBatchFilter = it },
-                label = "Filter Players by Batch"
+                label = "Filter Players by Batch",
+                modifier = Modifier.height(56.dp)
             )
         }
 
         if (filteredPlayers.isEmpty()) {
             item {
-                Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
                     Text(
                         if (searchQuery.isNotEmpty()) "No matches found" else "No players registered",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.outline
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFA1A1AA)
                     )
                 }
             }
@@ -1749,52 +1778,137 @@ fun PlayersScreen(
             ElevatedCard(
                 onClick = { viewingPlayerDetails = player },
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
             ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), 
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        modifier = Modifier.size(36.dp),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                        color = Color(0xFF37161D)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = player.name.take(1).uppercase(),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFF99C1)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(player.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(" · ", style = MaterialTheme.typography.titleMedium)
-                            Text(yearShort, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                text = player.name, 
+                                style = MaterialTheme.typography.bodyLarge, 
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = " · ", 
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFA1A1AA)
+                            )
+                            Text(
+                                text = "'$yearShort", 
+                                style = MaterialTheme.typography.bodySmall, 
+                                color = Color(0xFFFF99C1),
+                                fontWeight = FontWeight.Medium
+                            )
                         }
-                        Text(bName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Medium)
+                        Text(
+                            text = bName, 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = Color(0xFFA1A1AA), 
+                            fontSize = 11.sp
+                        )
                     }
-                    IconButton(onClick = { editingPlayer = player; showPlayerDialog = true }) { 
-                        Icon(Icons.Default.Edit, "Edit", tint = MaterialTheme.colorScheme.primary) 
-                    }
-                    IconButton(onClick = { playerToDelete = player }) { 
-                        Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error) 
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        IconButton(
+                            onClick = { editingPlayer = player; showPlayerDialog = true },
+                            modifier = Modifier.size(30.dp)
+                        ) { 
+                            Icon(
+                                imageVector = Icons.Default.Edit, 
+                                contentDescription = "Edit", 
+                                tint = Color(0xFFA1A1AA),
+                                modifier = Modifier.size(16.dp)
+                            ) 
+                        }
+                        IconButton(
+                            onClick = { playerToDelete = player },
+                            modifier = Modifier.size(30.dp)
+                        ) { 
+                            Icon(
+                                imageVector = Icons.Default.Delete, 
+                                contentDescription = "Delete", 
+                                tint = Color(0xFFEF4444).copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            ) 
+                        }
                     }
                 }
             }
         }
 
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        item { Text("Manage Batches", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+        item { 
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp), 
+                color = Color(0xFF3A2029)
+            ) 
+        }
+
+        item { 
+            Text(
+                "Manage Batches", 
+                style = MaterialTheme.typography.titleMedium, 
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            ) 
+        }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = newBatchName,
                     onValueChange = { newBatchName = it },
-                    label = { Text("New Batch Name") },
+                    label = { Text("New Batch Name", color = Color(0xFFA1A1AA)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    shape = MaterialTheme.shapes.medium
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = Color(0xFF2A1118),
+                        unfocusedContainerColor = Color(0xFF2A1118),
+                        focusedBorderColor = Color(0xFF3A2029),
+                        unfocusedBorderColor = Color(0xFF3A2029)
+                    )
                 )
                 Spacer(Modifier.width(12.dp))
                 Button(
                     onClick = { if (newBatchName.isNotBlank()) { onAddBatch(newBatchName); newBatchName = "" } },
-                    shape = MaterialTheme.shapes.medium
-                ) { Text("Add") }
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D))
+                ) { 
+                    Text("Add", fontWeight = FontWeight.Bold) 
+                }
             }
         }
 
         if (batches.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
-                    Text("No batches created", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                    Text("No batches created", style = MaterialTheme.typography.bodyLarge, color = Color(0xFFA1A1AA))
                 }
             }
         }
@@ -1803,30 +1917,47 @@ fun PlayersScreen(
             val playerCount = players.count { it.batchId == batch.id }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
             ) {
-                Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(batch.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        shape = MaterialTheme.shapes.extraSmall
-                    ) {
-                        Text("$playerCount players", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), 
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = batch.name, 
+                            style = MaterialTheme.typography.titleMedium, 
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "$playerCount players enrolled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFA1A1AA)
+                        )
                     }
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(onClick = { batchToRename = batch }) {
-                        Icon(Icons.Default.Edit, "Rename", tint = MaterialTheme.colorScheme.primary)
-                    }
-                    IconButton(
-                        onClick = { batchToDelete = batch },
-                        enabled = playerCount == 0
-                    ) { 
-                        Icon(
-                            Icons.Default.Close, 
-                            "Delete", 
-                            tint = if (playerCount == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
-                        ) 
+                    
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(
+                            onClick = { batchToRename = batch },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, "Rename", tint = Color(0xFFA1A1AA), modifier = Modifier.size(18.dp))
+                        }
+                        IconButton(
+                            onClick = { batchToDelete = batch },
+                            enabled = playerCount == 0,
+                            modifier = Modifier.size(32.dp)
+                        ) { 
+                            Icon(
+                                imageVector = Icons.Default.Close, 
+                                contentDescription = "Delete", 
+                                tint = if (playerCount == 0) Color(0xFFEF4444).copy(alpha = 0.7f) else Color(0xFFA1A1AA).copy(alpha = 0.3f),
+                                modifier = Modifier.size(18.dp)
+                            ) 
+                        }
                     }
                 }
             }
