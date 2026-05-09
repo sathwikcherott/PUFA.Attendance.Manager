@@ -1,9 +1,8 @@
 package com.pufamanager
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -107,29 +106,37 @@ fun HistoryScreen(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             contentAlignment = Alignment.TopCenter
         ) {
-            when (selectedSection) {
-                "Attendance" -> AttendanceHistorySection(
-                    players = players,
-                    batches = batches,
-                    allAttendance = allAttendance,
-                    attendanceDao = attendanceDao,
-                    localDeviceId = localDeviceId,
-                    onSave = onSave
-                )
-                "Payments" -> PaymentHistorySection(
-                    players = players,
-                    batches = batches,
-                    allPayments = allPayments,
-                    paymentDao = paymentDao,
-                    localDeviceId = localDeviceId,
-                    onSave = onSave
-                )
-                "Exports" -> ExportsSection(
-                    players = players,
-                    batches = batches,
-                    allAttendance = allAttendance,
-                    allPayments = allPayments
-                )
+            AnimatedContent(
+                targetState = selectedSection,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                },
+                label = "sectionTransition"
+            ) { section ->
+                when (section) {
+                    "Attendance" -> AttendanceHistorySection(
+                        players = players,
+                        batches = batches,
+                        allAttendance = allAttendance,
+                        attendanceDao = attendanceDao,
+                        localDeviceId = localDeviceId,
+                        onSave = onSave
+                    )
+                    "Payments" -> PaymentHistorySection(
+                        players = players,
+                        batches = batches,
+                        allPayments = allPayments,
+                        paymentDao = paymentDao,
+                        localDeviceId = localDeviceId,
+                        onSave = onSave
+                    )
+                    "Exports" -> ExportsSection(
+                        players = players,
+                        batches = batches,
+                        allAttendance = allAttendance,
+                        allPayments = allPayments
+                    )
+                }
             }
         }
     }
@@ -535,7 +542,9 @@ fun AttendanceHistorySection(
                 val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
 
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(
+                        animationSpec = tween(250)
+                    ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = primarySurface),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
@@ -783,7 +792,9 @@ fun PaymentHistorySection(
                 }
 
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(
+                        animationSpec = tween(250)
+                    ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = primarySurface),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)

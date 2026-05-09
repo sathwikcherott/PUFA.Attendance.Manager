@@ -9,9 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,14 +41,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Typeface
-import android.graphics.pdf.PdfDocument
 import java.io.File
-import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -73,7 +65,6 @@ class MainActivity : ComponentActivity() {
         val batchDao = db.batchDao()
         val attendanceDao = db.attendanceDao()
         val paymentDao = db.paymentDao()
-        val conflictDao = db.conflictDao()
         val syncManager = SyncManager(db)
         
         val localDeviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "device_${UUID.randomUUID()}"
@@ -84,8 +75,6 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val context = LocalContext.current
                 
-                val conflicts by conflictDao.getAllConflicts().collectAsState(initial = emptyList())
-
                 // Persistent selection states
                 var lastSelectedBatch by remember { mutableStateOf<Batch?>(null) }
 
@@ -177,189 +166,197 @@ class MainActivity : ComponentActivity() {
                     }
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        when (currentScreen) {
-                            AppScreen.Home -> HomeScreen(
-                                players = players,
-                                batches = batches,
-                                attendanceToday = attendanceToday,
-                                paymentsThisMonth = paymentsThisMonth,
-                                currentMonth = currentMonth,
-                                allAttendance = allAttendance,
-                                onShare = {
-                                    scope.launch {
-                                        try {
-                                            val json = syncManager.exportJson()
-                                            val file = File(context.cacheDir, "pufa_backup.json")
-                                            file.writeText(json)
-                                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                                type = "application/json"
-                                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        AnimatedContent(
+                            targetState = currentScreen,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                            },
+                            label = "screenTransition"
+                        ) { screen ->
+                            when (screen) {
+                                AppScreen.Home -> HomeScreen(
+                                    players = players,
+                                    batches = batches,
+                                    attendanceToday = attendanceToday,
+                                    paymentsThisMonth = paymentsThisMonth,
+                                    currentMonth = currentMonth,
+                                    allAttendance = allAttendance,
+                                    onShare = {
+                                        scope.launch {
+                                            try {
+                                                val json = syncManager.exportJson()
+                                                val file = File(context.cacheDir, "pufa_backup.json")
+                                                file.writeText(json)
+                                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                    type = "application/json"
+                                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                }
+                                                context.startActivity(android.content.Intent.createChooser(intent, "Share Data"))
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                                             }
-                                            context.startActivity(android.content.Intent.createChooser(intent, "Share Data"))
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    onImport = { 
+                                        importLauncher.launch("application/json") 
+                                    }
+                                )
+                                AppScreen.Attendance -> AttendanceScreen(
+                                    players = players,
+                                    batches = batches,
+                                    initialBatch = lastSelectedBatch,
+                                    attendanceToday = attendanceToday,
+                                    todayDate = todayDate,
+                                    onBatchSelected = { lastSelectedBatch = it },
+                                    onSave = { results ->
+                                        scope.launch {
+                                            try {
+                                                results.forEach { (pid, state) ->
+                                                    val existing = attendanceToday.find { it.playerId == pid }
+                                                    if (state != null) {
+                                                        attendanceDao.insertOrUpdateAttendance(
+                                                            Attendance(
+                                                                id = existing?.id ?: System.currentTimeMillis().toInt(),
+                                                                playerId = pid,
+                                                                date = todayDate,
+                                                                isPresent = state,
+                                                                lastUpdated = System.currentTimeMillis(),
+                                                                deviceId = localDeviceId
+                                                            )
+                                                        )
+                                                    } else if (existing != null) {
+                                                        attendanceDao.deleteAttendance(existing)
+                                                    }
+                                                }
+                                                saveData()
+                                                Toast.makeText(context, "Attendance Saved!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error saving attendance", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     }
-                                },
-                                onImport = { 
-                                    importLauncher.launch("application/json") 
-                                }
-                            )
-                            AppScreen.Attendance -> AttendanceScreen(
-                                players = players,
-                                batches = batches,
-                                initialBatch = lastSelectedBatch,
-                                attendanceToday = attendanceToday,
-                                todayDate = todayDate,
-                                onBatchSelected = { lastSelectedBatch = it },
-                                onSave = { results ->
-                                    scope.launch {
-                                        try {
-                                            results.forEach { (pid, state) ->
-                                                val existing = attendanceToday.find { it.playerId == pid }
-                                                if (state != null) {
-                                                    attendanceDao.insertOrUpdateAttendance(
-                                                        Attendance(
-                                                            id = existing?.id ?: System.currentTimeMillis().toInt(),
-                                                            playerId = pid,
-                                                            date = todayDate,
-                                                            isPresent = state,
+                                )
+                                AppScreen.Fees -> FeesScreen(
+                                    players = players,
+                                    batches = batches,
+                                    paymentsThisMonth = paymentsThisMonth,
+                                    currentMonth = currentMonth,
+                                    onTogglePayment = { player, isPaid, amount ->
+                                        scope.launch {
+                                            try {
+                                                if (isPaid) {
+                                                    paymentDao.insertOrUpdatePayment(
+                                                        Payment(
+                                                            playerId = player.id, 
+                                                            amount = amount, 
+                                                            date = todayDate, 
+                                                            month = currentMonth,
                                                             lastUpdated = System.currentTimeMillis(),
                                                             deviceId = localDeviceId
                                                         )
                                                     )
-                                                } else if (existing != null) {
-                                                    attendanceDao.deleteAttendance(existing)
-                                                }
-                                            }
-                                            saveData()
-                                            Toast.makeText(context, "Attendance Saved!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error saving attendance", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            )
-                            AppScreen.Fees -> FeesScreen(
-                                players = players,
-                                batches = batches,
-                                paymentsThisMonth = paymentsThisMonth,
-                                currentMonth = currentMonth,
-                                onTogglePayment = { player, isPaid, amount ->
-                                    scope.launch {
-                                        try {
-                                            if (isPaid) {
-                                                paymentDao.insertOrUpdatePayment(
-                                                    Payment(
-                                                        playerId = player.id, 
-                                                        amount = amount, 
-                                                        date = todayDate, 
-                                                        month = currentMonth,
-                                                        lastUpdated = System.currentTimeMillis(),
-                                                        deviceId = localDeviceId
-                                                    )
-                                                )
-                                                saveData()
-                                                Toast.makeText(context, "Payment Recorded", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                paymentsThisMonth.find { it.playerId == player.id }?.let {
-                                                    paymentDao.deletePayment(it)
                                                     saveData()
-                                                    Toast.makeText(context, "Payment Removed", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "Payment Recorded", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    paymentsThisMonth.find { it.playerId == player.id }?.let {
+                                                        paymentDao.deletePayment(it)
+                                                        saveData()
+                                                        Toast.makeText(context, "Payment Removed", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error updating payment", Toast.LENGTH_SHORT).show()
                                             }
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error updating payment", Toast.LENGTH_SHORT).show()
                                         }
                                     }
-                                }
-                            )
-                            AppScreen.Players -> PlayersScreen(
-                                players = players,
-                                batches = batches,
-                                onAddPlayer = { name, bId, yob, isEx, exRe ->
-                                    scope.launch { 
-                                        try {
-                                            val newId = System.currentTimeMillis().toInt()
-                                            playerDao.insertPlayer(Player(id = newId, name = name, batchId = bId, yearOfBirth = yob, isExempted = isEx, exemptionReason = exRe, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
-                                            saveData()
-                                            Toast.makeText(context, "Player Added!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error adding player", Toast.LENGTH_SHORT).show()
+                                )
+                                AppScreen.Players -> PlayersScreen(
+                                    players = players,
+                                    batches = batches,
+                                    onAddPlayer = { name, bId, yob, isEx, exRe ->
+                                        scope.launch { 
+                                            try {
+                                                val newId = System.currentTimeMillis().toInt()
+                                                playerDao.insertPlayer(Player(id = newId, name = name, batchId = bId, yearOfBirth = yob, isExempted = isEx, exemptionReason = exRe, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                                saveData()
+                                                Toast.makeText(context, "Player Added!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error adding player", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onUpdatePlayer = { player ->
-                                    scope.launch { 
-                                        try {
-                                            playerDao.updatePlayer(player.copy(lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
-                                            saveData()
-                                            Toast.makeText(context, "Player Updated!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error updating player", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onUpdatePlayer = { player ->
+                                        scope.launch { 
+                                            try {
+                                                playerDao.updatePlayer(player.copy(lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                                saveData()
+                                                Toast.makeText(context, "Player Updated!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error updating player", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onDeletePlayer = { player ->
-                                    scope.launch { 
-                                        try {
-                                            playerDao.deletePlayer(player)
-                                            saveData()
-                                            Toast.makeText(context, "Player Deleted", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error deleting player", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onDeletePlayer = { player ->
+                                        scope.launch { 
+                                            try {
+                                                playerDao.deletePlayer(player)
+                                                saveData()
+                                                Toast.makeText(context, "Player Deleted", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error deleting player", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onAddBatch = { name ->
-                                    scope.launch { 
-                                        try {
-                                            val newId = System.currentTimeMillis().toInt()
-                                            batchDao.insertBatch(Batch(id = newId, name = name, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
-                                            saveData()
-                                            Toast.makeText(context, "Batch Added!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error adding batch", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onAddBatch = { name ->
+                                        scope.launch { 
+                                            try {
+                                                val newId = System.currentTimeMillis().toInt()
+                                                batchDao.insertBatch(Batch(id = newId, name = name, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                                saveData()
+                                                Toast.makeText(context, "Batch Added!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error adding batch", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onDeleteBatch = { batch ->
-                                    scope.launch { 
-                                        try {
-                                            batchDao.deleteBatch(batch)
-                                            saveData()
-                                            Toast.makeText(context, "Batch Deleted", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error deleting batch", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onDeleteBatch = { batch ->
+                                        scope.launch { 
+                                            try {
+                                                batchDao.deleteBatch(batch)
+                                                saveData()
+                                                Toast.makeText(context, "Batch Deleted", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error deleting batch", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                onUpdateBatch = { batch ->
-                                    scope.launch {
-                                        try {
-                                            batchDao.updateBatch(batch.copy(lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
-                                            saveData()
-                                            Toast.makeText(context, "Batch Updated!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Error updating batch", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onUpdateBatch = { batch ->
+                                        scope.launch {
+                                            try {
+                                                batchDao.updateBatch(batch.copy(lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                                saveData()
+                                                Toast.makeText(context, "Batch Updated!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error updating batch", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
-                                    }
-                                },
-                                attendanceDao = attendanceDao,
-                                paymentDao = paymentDao
-                            )
-                            AppScreen.History -> HistoryScreen(
-                                players = players,
-                                batches = batches,
-                                allAttendance = allAttendance,
-                                allPayments = allPayments,
-                                attendanceDao = attendanceDao,
-                                paymentDao = paymentDao,
-                                localDeviceId = localDeviceId,
-                                onSave = { saveData() }
-                            )
+                                    },
+                                    attendanceDao = attendanceDao,
+                                    paymentDao = paymentDao
+                                )
+                                AppScreen.History -> HistoryScreen(
+                                    players = players,
+                                    batches = batches,
+                                    allAttendance = allAttendance,
+                                    allPayments = allPayments,
+                                    attendanceDao = attendanceDao,
+                                    paymentDao = paymentDao,
+                                    localDeviceId = localDeviceId,
+                                    onSave = { saveData() }
+                                )
+                            }
                         }
                     }
                 }
@@ -395,16 +392,8 @@ class MainActivity : ComponentActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val appData = Gson().fromJson(json, AppData::class.java)
-                    
-                    // Safe Merge Logic
-                    
-                    // 1. Restore Batches (Strategy: IGNORE on ID conflict)
                     appData.batches.forEach { db.batchDao().insertBatch(it) }
-                    
-                    // 2. Restore Students (Strategy: IGNORE on ID conflict)
                     appData.students.forEach { db.playerDao().insertPlayer(it) }
-                    
-                    // 3. Restore Attendance (Strategy: REPLACE/UPDATE on ID conflict)
                     appData.attendance.forEach { (date, playerMap) ->
                         playerMap.forEach { (playerId, status) ->
                             db.attendanceDao().insertOrUpdateAttendance(
@@ -417,11 +406,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
-                    
-                    // 4. Restore Payments (Strategy: REPLACE/UPDATE on ID conflict)
                     appData.payments.forEach { db.paymentDao().insertOrUpdatePayment(it) }
-                    
-                    Log.d("AUTOSAVE", "Data loaded and merged successfully")
+                    Log.d("AUTOSAVE", "Data loaded successfully")
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -542,7 +528,9 @@ fun HomeScreen(
                     if (lowAttendance.isNotEmpty()) {
                         Card(
                             onClick = { isAttendanceExpanded = !isAttendanceExpanded },
-                            modifier = Modifier.fillMaxWidth().animateContentSize(), 
+                            modifier = Modifier.fillMaxWidth().animateContentSize(
+                                animationSpec = tween(250)
+                            ), 
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
@@ -593,7 +581,9 @@ fun HomeScreen(
                     if (unpaidPlayers.isNotEmpty()) {
                         Card(
                             onClick = { isDefaultersExpanded = !isDefaultersExpanded },
-                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            modifier = Modifier.fillMaxWidth().animateContentSize(
+                                animationSpec = tween(250)
+                            ),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
                             shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
@@ -702,7 +692,11 @@ fun AttendanceHeroCard(
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
 
-    val animatedRatio by animateFloatAsState(targetValue = attendanceRatio, label = "ratio")
+    val animatedRatio by animateFloatAsState(
+        targetValue = attendanceRatio, 
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "ratio"
+    )
 
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -856,7 +850,11 @@ fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, accent
 
 @Composable
 fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
-    val animatedRatio by animateFloatAsState(targetValue = ratio, label = "ratio")
+    val animatedRatio by animateFloatAsState(
+        targetValue = ratio, 
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "ratio"
+    )
     val cardBg = Color(0xFF2A1118)
     val secondaryText = Color(0xFFA1A1AA)
 
@@ -1199,10 +1197,12 @@ fun AttendanceButton(
 
     val bgColor by animateColorAsState(
         targetValue = if (isSelected) activeColor else elevatedSurface,
+        animationSpec = tween(200),
         label = "bgColor"
     )
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) Color.White else secondaryText,
+        animationSpec = tween(200),
         label = "contentColor"
     )
 
@@ -1240,7 +1240,6 @@ fun FeesScreen(
     val accentPink = Color(0xFFFF99C1)
     val successGreen = Color(0xFF2CC55E)
     val dangerRed = Color(0xFFEF4444)
-    val warningAmber = Color(0xFFF59E0B)
     val primaryText = Color(0xFFFFFFFF)
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
@@ -1434,7 +1433,9 @@ fun FeesScreen(
                 }
 
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
+                    modifier = Modifier.fillMaxWidth().animateContentSize(
+                        animationSpec = tween(250)
+                    ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = primarySurface),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
@@ -1518,121 +1519,6 @@ fun FeesScreen(
                         )
                     }
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ConflictResolutionScreen(
-    conflicts: List<SyncConflict>,
-    onResolve: (SyncConflict, Boolean) -> Unit
-) {
-    if (conflicts.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No conflicts detected", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
-        ) {
-            item {
-                Text(
-                    "Resolve Conflicts",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Select the correct version for each record below.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-
-            items(conflicts, key = { "conf_${it.id}" }) { conflict ->
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                if (conflict.type == "ATTENDANCE") Icons.Default.Done else Icons.Default.Star,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "${conflict.type}: ${conflict.playerName}",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Text(
-                            "Identifier: ${conflict.identifier}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        
-                        Spacer(Modifier.height(12.dp))
-                        
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            ConflictChoice(
-                                label = "Local Version",
-                                value = conflict.localValue,
-                                timestamp = conflict.localUpdatedAt,
-                                device = conflict.localDeviceId,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onResolve(conflict, false) }
-                            )
-                            ConflictChoice(
-                                label = "Incoming Version",
-                                value = conflict.incomingValue,
-                                timestamp = conflict.incomingUpdatedAt,
-                                device = conflict.incomingDeviceId,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onResolve(conflict, true) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ConflictChoice(
-    label: String,
-    value: String,
-    timestamp: Long,
-    device: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val dateStr = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date(timestamp))
-    OutlinedCard(
-        onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
-            Spacer(Modifier.height(4.dp))
-            Text("Updated: $dateStr", style = MaterialTheme.typography.labelSmall)
-            Text("Device: ${device.take(8)}...", style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text("Keep This", style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -1749,7 +1635,9 @@ fun PlayersScreen(
     ) {
         item {
             Row(
-                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                modifier = Modifier.fillMaxWidth().animateContentSize(
+                    animationSpec = tween(250)
+                ),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1862,7 +1750,9 @@ fun PlayersScreen(
             
             ElevatedCard(
                 onClick = { viewingPlayerDetails = player },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().animateContentSize(
+                    animationSpec = tween(250)
+                ),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
@@ -2003,7 +1893,9 @@ fun PlayersScreen(
         items(batches, key = { "b_${it.id}" }) { batch ->
             val playerCount = players.count { it.batchId == batch.id }
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().animateContentSize(
+                    animationSpec = tween(250)
+                ),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
@@ -2299,5 +2191,3 @@ fun PlayerDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
-
-
