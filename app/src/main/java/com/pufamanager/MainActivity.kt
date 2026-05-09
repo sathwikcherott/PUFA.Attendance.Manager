@@ -1168,6 +1168,17 @@ fun FeesScreen(
     currentMonth: String,
     onTogglePayment: (Player, Boolean, Double) -> Unit
 ) {
+    val backgroundDark = Color(0xFF14090D)
+    val primarySurface = Color(0xFF2A1118)
+    val elevatedSurface = Color(0xFF37161D)
+    val accentPink = Color(0xFFFF99C1)
+    val successGreen = Color(0xFF2CC55E)
+    val dangerRed = Color(0xFFEF4444)
+    val warningAmber = Color(0xFFF59E0B)
+    val primaryText = Color(0xFFFFFFFF)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     var filterStatus by remember { mutableStateOf("All") } // All, Paid, Unpaid
 
@@ -1182,29 +1193,59 @@ fun FeesScreen(
         selectedFeeOption.toDouble()
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Monthly Fees", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(currentMonth, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundDark)
+            .padding(horizontal = 16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Monthly Fees",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = primaryText
+        )
+        Text(
+            currentMonth,
+            style = MaterialTheme.typography.bodyMedium,
+            color = secondaryText
+        )
+        
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Filter Toggle
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth(),
+            space = 0.dp
+        ) {
             val options = listOf("All", "Paid", "Unpaid")
             options.forEachIndexed { index, label ->
                 SegmentedButton(
                     selected = filterStatus == label,
                     onClick = { filterStatus = label },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    colors = SegmentedButtonDefaults.colors(
+                        activeContainerColor = elevatedSurface,
+                        activeContentColor = accentPink,
+                        inactiveContainerColor = Color.Transparent,
+                        inactiveContentColor = secondaryText,
+                        activeBorderColor = dividerColor,
+                        inactiveBorderColor = dividerColor
+                    )
                 ) {
-                    Text(label)
+                    Text(label, style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             BatchSelector(
                 selectedBatch = selectedBatch,
                 batches = batches,
@@ -1216,24 +1257,33 @@ fun FeesScreen(
             ExposedDropdownMenuBox(
                 expanded = feeDropdownExpanded,
                 onExpandedChange = { feeDropdownExpanded = !feeDropdownExpanded },
-                modifier = Modifier.width(120.dp)
+                modifier = Modifier.width(110.dp)
             ) {
                 OutlinedTextField(
-                    value = selectedFeeOption,
+                    value = if (selectedFeeOption == "Custom") "Custom" else "₹$selectedFeeOption",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Fee") },
+                    label = { Text("Fee", color = secondaryText) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = feeDropdownExpanded) },
                     modifier = Modifier.menuAnchor(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText,
+                        focusedContainerColor = primarySurface,
+                        unfocusedContainerColor = primarySurface,
+                        focusedBorderColor = dividerColor,
+                        unfocusedBorderColor = dividerColor
+                    )
                 )
                 ExposedDropdownMenu(
                     expanded = feeDropdownExpanded,
-                    onDismissRequest = { feeDropdownExpanded = false }
+                    onDismissRequest = { feeDropdownExpanded = false },
+                    modifier = Modifier.background(primarySurface)
                 ) {
                     feeOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(if (option == "Custom") option else "₹$option") },
+                            text = { Text(if (option == "Custom") option else "₹$option", color = primaryText) },
                             onClick = {
                                 selectedFeeOption = option
                                 feeDropdownExpanded = false
@@ -1247,11 +1297,19 @@ fun FeesScreen(
                 OutlinedTextField(
                     value = customAmount,
                     onValueChange = { if (it.all { char -> char.isDigit() }) customAmount = it },
-                    label = { Text("Amount") },
-                    modifier = Modifier.width(100.dp),
+                    label = { Text("Amount", color = secondaryText) },
+                    modifier = Modifier.width(90.dp),
                     singleLine = true,
-                    shape = MaterialTheme.shapes.medium,
-                    prefix = { Text("₹") },
+                    shape = RoundedCornerShape(12.dp),
+                    prefix = { Text("₹", color = secondaryText) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = primaryText,
+                        unfocusedTextColor = primaryText,
+                        focusedContainerColor = primarySurface,
+                        unfocusedContainerColor = primarySurface,
+                        focusedBorderColor = dividerColor,
+                        unfocusedBorderColor = dividerColor
+                    ),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                     )
@@ -1259,10 +1317,10 @@ fun FeesScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
@@ -1285,7 +1343,7 @@ fun FeesScreen(
             if (displayPlayers.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No players found", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
+                        Text("No records found", style = MaterialTheme.typography.bodyLarge, color = secondaryText)
                     }
                 }
             }
@@ -1294,57 +1352,85 @@ fun FeesScreen(
                 val isPaid = payment != null
                 
                 val statusColor = when {
-                    isPaid -> Color(0xFF2E7D32) // Green
-                    player.isExempted -> MaterialTheme.colorScheme.outline // Neutral
-                    else -> MaterialTheme.colorScheme.error // Red
+                    isPaid -> successGreen
+                    player.isExempted -> secondaryText
+                    else -> dangerRed
                 }
 
-                val bgColor by animateColorAsState(
-                    if (isPaid) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) 
-                    else if (player.isExempted) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    else MaterialTheme.colorScheme.surface, 
-                    label = "bg"
-                )
-                
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = bgColor)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = primarySurface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
                 ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(player.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = player.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = primaryText,
+                                fontSize = 16.sp
+                            )
+                            
+                            Spacer(Modifier.height(4.dp))
+                            
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (player.isExempted) {
                                     Surface(
                                         color = statusColor.copy(alpha = 0.1f),
-                                        shape = MaterialTheme.shapes.extraSmall
+                                        shape = RoundedCornerShape(4.dp)
                                     ) {
                                         Text(
-                                            "EXEMPT" + (player.exemptionReason?.let { " ($it)" } ?: ""),
+                                            text = "EXEMPT" + (player.exemptionReason?.let { " ($it)" } ?: ""),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = statusColor,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
+                                } else {
+                                    Text(
+                                        text = if (isPaid) "Payment Confirmed" else "Pending Payment",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isPaid) statusColor else statusColor.copy(alpha = 0.8f),
+                                        fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
+                                    )
                                 }
-                                payment?.let {
-                                    Text("Paid ₹${it.amount}", style = MaterialTheme.typography.bodyMedium, color = statusColor, fontWeight = FontWeight.ExtraBold)
-                                } ?: run {
-                                    if (!player.isExempted) {
-                                        Text("Not Paid", style = MaterialTheme.typography.bodySmall, color = statusColor, fontWeight = FontWeight.Bold)
-                                    }
+                                
+                                if (isPaid && payment != null) {
+                                    Text(
+                                        text = "•",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = secondaryText
+                                    )
+                                    Text(
+                                        text = "₹${payment.amount.toInt()}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = primaryText,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
+                        
                         Switch(
                             checked = isPaid,
                             onCheckedChange = { onTogglePayment(player, it, currentFeeValue) },
-                            modifier = Modifier.scale(0.9f),
+                            modifier = Modifier.scale(0.85f),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = successGreen,
+                                uncheckedThumbColor = secondaryText,
+                                uncheckedTrackColor = elevatedSurface,
+                                uncheckedBorderColor = dividerColor
+                            ),
                             thumbContent = {
-                                if (isPaid) Icon(Icons.Default.Check, null, Modifier.size(12.dp))
-                                else Icon(Icons.Default.Close, null, Modifier.size(12.dp))
+                                if (isPaid) Icon(Icons.Default.Check, null, Modifier.size(12.dp), tint = successGreen)
+                                else Icon(Icons.Default.Close, null, Modifier.size(12.dp), tint = elevatedSurface)
                             }
                         )
                     }
