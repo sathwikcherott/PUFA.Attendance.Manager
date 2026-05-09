@@ -544,33 +544,47 @@ fun HomeScreen(
                             onClick = { isAttendanceExpanded = !isAttendanceExpanded },
                             modifier = Modifier.fillMaxWidth().animateContentSize(), 
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-                            shape = MaterialTheme.shapes.large,
+                            shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Low Attendance Warnings", 
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium
-                                        ), 
-                                        color = Color(0xFFF59E0B)
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            "${lowAttendance.size} Attendance Warnings", 
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Medium
+                                            ), 
+                                            color = Color.White
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = if (isAttendanceExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFFA1A1AA),
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                val displayList = if (isAttendanceExpanded) lowAttendance.sortedBy { it.first } else lowAttendance.take(5)
-                                displayList.forEach { (name, percent) ->
-                                    val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
-                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Text(name, style = MaterialTheme.typography.bodySmall, color = Color.White)
-                                        Text("$percent%", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = color)
+                                
+                                if (isAttendanceExpanded) {
+                                    Spacer(Modifier.height(12.dp))
+                                    lowAttendance.forEach { (name, percent) ->
+                                        val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
+                                            Text("$percent%", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = color)
+                                        }
                                     }
-                                }
-                                if (!isAttendanceExpanded && lowAttendance.size > 5) {
-                                    Text("...and ${lowAttendance.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFA1A1AA), modifier = Modifier.padding(top = 4.dp))
                                 }
                             }
                         }
@@ -581,33 +595,47 @@ fun HomeScreen(
                             onClick = { isDefaultersExpanded = !isDefaultersExpanded },
                             modifier = Modifier.fillMaxWidth().animateContentSize(),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-                            shape = MaterialTheme.shapes.large,
+                            shape = RoundedCornerShape(12.dp),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFF99C1), modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Fee Defaulters (${unpaidPlayers.size})", 
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium
-                                        ), 
-                                        color = Color.White
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFF99C1), modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            "${unpaidPlayers.size} Fee Defaulters", 
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Medium
+                                            ), 
+                                            color = Color.White
+                                        )
+                                    }
+                                    Icon(
+                                        imageVector = if (isDefaultersExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = Color(0xFFA1A1AA),
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                val displayList = if (isDefaultersExpanded) unpaidPlayers.sortedBy { it.name } else unpaidPlayers.take(5)
-                                displayList.forEach { player ->
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                        Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color.White)
+
+                                if (isDefaultersExpanded) {
+                                    Spacer(Modifier.height(12.dp))
+                                    unpaidPlayers.sortedBy { it.name }.forEach { player ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically, 
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        ) {
+                                            Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
+                                            Spacer(Modifier.width(10.dp))
+                                            Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
+                                        }
                                     }
-                                }
-                                if (!isDefaultersExpanded && unpaidPlayers.size > 5) {
-                                    Text("...and ${unpaidPlayers.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFA1A1AA), modifier = Modifier.padding(top = 4.dp))
                                 }
                             }
                         }
