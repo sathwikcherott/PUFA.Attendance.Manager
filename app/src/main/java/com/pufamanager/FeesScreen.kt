@@ -56,6 +56,24 @@ fun FeesScreen(
         selectedFeeOption.toDouble()
     }
 
+    val displayPlayers = remember(players, selectedBatch, filterStatus, paymentsThisMonth) {
+        val filteredByBatch = if (selectedBatch == null) players else players.filter { it.batchId == selectedBatch?.id }
+        
+        when (filterStatus) {
+            "Paid" -> filteredByBatch.filter { p -> paymentsThisMonth.any { it.playerId == p.id } }.sortedBy { it.name }
+            "Unpaid" -> filteredByBatch.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }.sortedBy { it.name }
+            else -> filteredByBatch.sortedWith(compareBy<Player> { p ->
+                // Paid first, then Unpaid, then Exempted
+                val isPaid = paymentsThisMonth.any { it.playerId == p.id }
+                when {
+                    isPaid -> 0
+                    !p.isExempted -> 1
+                    else -> 2
+                }
+            }.thenBy { it.name })
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -197,24 +215,8 @@ fun FeesScreen(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            val filteredByBatch = if (selectedBatch == null) players else players.filter { it.batchId == selectedBatch?.id }
-            
-            val displayPlayers = when (filterStatus) {
-                "Paid" -> filteredByBatch.filter { p -> paymentsThisMonth.any { it.playerId == p.id } }.sortedBy { it.name }
-                "Unpaid" -> filteredByBatch.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }.sortedBy { it.name }
-                else -> filteredByBatch.sortedWith(compareBy<Player> { p ->
-                    // Paid first, then Unpaid, then Exempted
-                    val isPaid = paymentsThisMonth.any { it.playerId == p.id }
-                    when {
-                        isPaid -> 0
-                        !p.isExempted -> 1
-                        else -> 2
-                    }
-                }.thenBy { it.name })
-            }
-
             if (displayPlayers.isEmpty()) {
-                item {
+                item(key = "no_records") {
                     Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
                         Text("No records found", style = MaterialTheme.typography.bodyLarge, color = secondaryText)
                     }

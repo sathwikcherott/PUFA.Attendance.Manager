@@ -50,7 +50,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
     ) {
         // 1. Hero Attendance Card
-        item {
+        item(key = "attendance_hero") {
             val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
             val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
             AttendanceHeroCard(
@@ -62,7 +62,7 @@ fun HomeScreen(
         }
 
         // 2. Visual Insights
-        item {
+        item(key = "visual_insights") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Visual Insights", 
@@ -78,7 +78,7 @@ fun HomeScreen(
         }
 
         // 3. Camp Overview
-        item {
+        item(key = "camp_overview") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Camp Overview", 
@@ -117,7 +117,7 @@ fun HomeScreen(
         val unpaidPlayers = players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
 
         if (lowAttendance.isNotEmpty() || unpaidPlayers.isNotEmpty()) {
-            item {
+            item(key = "alerts_warnings") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "Alerts & Warnings", 
@@ -238,7 +238,7 @@ fun HomeScreen(
         }
 
         // 5. Data Sync / Actions
-        item {
+        item(key = "utility_actions") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Utility Actions", 

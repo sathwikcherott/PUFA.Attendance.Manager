@@ -180,7 +180,7 @@ fun ExportsSection(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(bottom = 32.dp)
     ) {
-        item {
+        item(key = "export_attendance") {
             ExportCard(
                 title = "Attendance Summary",
                 helperText = "Monthly summary table (PDF)",
@@ -209,7 +209,7 @@ fun ExportsSection(
             )
         }
 
-        item {
+        item(key = "export_payments") {
             ExportCard(
                 title = "Payment Reports",
                 helperText = "Monthly financial statements (PDF)",
@@ -238,7 +238,7 @@ fun ExportsSection(
             )
         }
 
-        item {
+        item(key = "export_roster") {
             ExportCard(
                 title = "Player Roster",
                 helperText = "Active player list export (PDF)",

@@ -55,7 +55,7 @@ fun PlayersScreen(
             val matchesBatch = if (selectedBatchFilter == null) true 
                                else player.batchId == selectedBatchFilter?.id
             matchesSearch && matchesBatch
-        }
+        }.sortedBy { it.name }
     }
 
     var playerToDelete by remember { mutableStateOf<Player?>(null) }
@@ -133,7 +133,7 @@ fun PlayersScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(top = 20.dp, bottom = 48.dp)
     ) {
-        item {
+        item(key = "header_search") {
             Row(
                 modifier = Modifier.fillMaxWidth().animateContentSize(
                     animationSpec = tween(250)
@@ -213,7 +213,7 @@ fun PlayersScreen(
             }
         }
 
-        item { 
+        item(key = "roster_label") { 
             Text(
                 "Player Roster", 
                 style = MaterialTheme.typography.labelLarge, 
@@ -222,7 +222,7 @@ fun PlayersScreen(
             ) 
         }
 
-        item {
+        item(key = "batch_filter") {
             BatchSelector(
                 selectedBatch = selectedBatchFilter,
                 batches = batches,
@@ -233,7 +233,7 @@ fun PlayersScreen(
         }
 
         if (filteredPlayers.isEmpty()) {
-            item {
+            item(key = "empty_players") {
                 Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
                     Text(
                         if (searchQuery.isNotEmpty()) "No matches found" else "No players registered",
@@ -244,7 +244,7 @@ fun PlayersScreen(
             }
         }
 
-        items(filteredPlayers.sortedBy { it.name }, key = { "p_${it.id}" }) { player ->
+        items(filteredPlayers, key = { "p_${it.id}" }) { player ->
             val bName = batches.find { it.id == player.batchId }?.name ?: "Unknown"
             val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
             
@@ -335,14 +335,14 @@ fun PlayersScreen(
             }
         }
 
-        item { 
+        item(key = "divider_batches") { 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp), 
                 color = Color(0xFF3A2029)
             ) 
         }
 
-        item { 
+        item(key = "manage_batches_label") { 
             Text(
                 "Manage Batches", 
                 style = MaterialTheme.typography.titleMedium, 
@@ -351,7 +351,7 @@ fun PlayersScreen(
             ) 
         }
 
-        item {
+        item(key = "add_batch_input") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = newBatchName,
@@ -383,7 +383,7 @@ fun PlayersScreen(
         }
 
         if (batches.isEmpty()) {
-            item {
+            item(key = "empty_batches") {
                 Box(modifier = Modifier.fillMaxWidth().height(80.dp), contentAlignment = Alignment.Center) {
                     Text("No batches created", style = MaterialTheme.typography.bodyLarge, color = Color(0xFFA1A1AA))
                 }
