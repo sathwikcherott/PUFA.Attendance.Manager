@@ -477,9 +477,10 @@ fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Visual Insights", 
-                    style = MaterialTheme.typography.titleMedium, 
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
                     color = Color.White
                 )
                 val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
@@ -492,9 +493,10 @@ fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Camp Overview", 
-                    style = MaterialTheme.typography.titleMedium, 
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
                     color = Color.White
                 )
                 
@@ -530,9 +532,10 @@ fun HomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         "Alerts & Warnings", 
-                        style = MaterialTheme.typography.titleMedium, 
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
                         color = Color.White
                     )
 
@@ -548,7 +551,14 @@ fun HomeScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Low Attendance Warnings", fontWeight = FontWeight.Medium, color = Color(0xFFF59E0B), fontSize = 13.sp)
+                                    Text(
+                                        "Low Attendance Warnings", 
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        ), 
+                                        color = Color(0xFFF59E0B)
+                                    )
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 val displayList = if (isAttendanceExpanded) lowAttendance.sortedBy { it.first } else lowAttendance.take(5)
@@ -578,7 +588,14 @@ fun HomeScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFF99C1), modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Fee Defaulters (${unpaidPlayers.size})", fontWeight = FontWeight.Medium, color = Color.White, fontSize = 13.sp)
+                                    Text(
+                                        "Fee Defaulters (${unpaidPlayers.size})", 
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        ), 
+                                        color = Color.White
+                                    )
                                 }
                                 Spacer(Modifier.height(8.dp))
                                 val displayList = if (isDefaultersExpanded) unpaidPlayers.sortedBy { it.name } else unpaidPlayers.take(5)
@@ -604,9 +621,10 @@ fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     "Utility Actions", 
-                    style = MaterialTheme.typography.titleMedium, 
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
                     color = Color.White
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -672,7 +690,7 @@ fun AttendanceHeroCard(
                     Text(
                         text = "Today's Session",
                         style = TextStyle(
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = primaryText
                         )
@@ -720,8 +738,8 @@ fun AttendanceHeroCard(
                     Text(
                         text = "$presentCount Present",
                         style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = successGreen
                         )
                     )
@@ -738,8 +756,8 @@ fun AttendanceHeroCard(
                     Text(
                         text = "$absentCount Absent",
                         style = TextStyle(
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = dangerRed
                         )
                     )
@@ -779,6 +797,7 @@ fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, accent
             Text(
                 text = title, 
                 style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.4.sp
                 ), 
@@ -794,8 +813,10 @@ fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, accent
                 Spacer(Modifier.width(10.dp))
                 Text(
                     text = value, 
-                    style = MaterialTheme.typography.titleLarge, 
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ), 
                     color = primaryText
                 )
             }
@@ -816,7 +837,14 @@ fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelSmall, color = secondaryText)
+            Text(
+                title, 
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                ), 
+                color = secondaryText
+            )
             LinearProgressIndicator(
                 progress = { animatedRatio },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
@@ -824,7 +852,7 @@ fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
                 trackColor = Color(0xFF3A2029),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
-            Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = Color.White)
+            Text(label, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = Color.White)
         }
     }
 }
@@ -947,13 +975,17 @@ fun AttendanceScreen(
             Column {
                 Text(
                     "Mark Attendance",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
                     color = primaryText
                 )
                 Text(
                     todayDate,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.sp
+                    ),
                     color = secondaryText
                 )
             }
@@ -1090,17 +1122,19 @@ fun AttendancePlayerCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = player.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     color = primaryText,
-                    fontSize = 15.sp,
                     maxLines = 1
                 )
                 Text(
                     text = "Born ${player.yearOfBirth}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondaryText,
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp
+                    ),
+                    color = secondaryText
                 )
             }
 
@@ -1203,13 +1237,17 @@ fun FeesScreen(
         
         Text(
             "Monthly Fees",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            ),
             color = primaryText
         )
         Text(
             currentMonth,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 13.sp
+            ),
             color = secondaryText
         )
         
@@ -1370,10 +1408,11 @@ fun FeesScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = player.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = primaryText,
-                                fontSize = 16.sp
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = primaryText
                             )
                             
                             Spacer(Modifier.height(4.dp))
@@ -1386,32 +1425,38 @@ fun FeesScreen(
                                     ) {
                                         Text(
                                             text = "EXEMPT" + (player.exemptionReason?.let { " ($it)" } ?: ""),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            ),
                                             color = statusColor,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            fontWeight = FontWeight.Bold
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 } else {
                                     Text(
                                         text = if (isPaid) "Payment Confirmed" else "Pending Payment",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (isPaid) statusColor else statusColor.copy(alpha = 0.8f),
-                                        fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
+                                        ),
+                                        color = if (isPaid) statusColor else statusColor.copy(alpha = 0.8f)
                                     )
                                 }
                                 
                                 if (isPaid && payment != null) {
                                     Text(
                                         text = "•",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
                                         color = secondaryText
                                     )
                                     Text(
                                         text = "₹${payment.amount.toInt()}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = primaryText,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = primaryText
                                     )
                                 }
                             }
@@ -1706,8 +1751,10 @@ fun PlayersScreen(
                 } else {
                     Text(
                         "Manage Camp",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
                         color = Color.White,
                         modifier = Modifier.weight(1f)
                     )

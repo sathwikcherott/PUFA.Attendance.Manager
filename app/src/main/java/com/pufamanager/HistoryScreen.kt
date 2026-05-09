@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,8 +64,10 @@ fun HistoryScreen(
         
         Text(
             text = "Activity History",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            ),
             color = Color.White,
             modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
         )
@@ -91,7 +94,10 @@ fun HistoryScreen(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     )
                 }
             }
@@ -287,13 +293,17 @@ fun ExportCard(
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     color = Color.White
                 )
                 Text(
                     text = helperText,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp
+                    ),
                     color = secondaryText
                 )
             }
@@ -478,8 +488,10 @@ fun AttendanceHistorySection(
                     Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp), tint = accentPink)
                     Text(
                         text = selectedDate,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
                         color = Color.White
                     )
                 }
@@ -535,14 +547,17 @@ fun AttendanceHistorySection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 15.sp
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = Color.White
                             )
                             Text(
                                 text = "Born $yearShort · Batch Member",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 12.sp
+                                ),
                                 color = secondaryText
                             )
                         }
@@ -780,10 +795,11 @@ fun PaymentHistorySection(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White,
-                                fontSize = 16.sp
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = Color.White
                             )
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (player.isExempted) {
@@ -802,14 +818,16 @@ fun PaymentHistorySection(
                                 } else {
                                     Text(
                                         text = if (isPaid) "Payment Confirmed" else "Pending Payment",
-                                        style = MaterialTheme.typography.bodySmall,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 12.sp
+                                        ),
                                         color = statusColor,
                                         fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
                                     )
                                 }
                                 
                                 Text("·", color = secondaryText)
-                                Text("'${yearShort}", style = MaterialTheme.typography.bodySmall, color = secondaryText)
+                                Text("'${yearShort}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = secondaryText)
                             }
                         }
 
