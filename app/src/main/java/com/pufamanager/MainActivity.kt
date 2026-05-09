@@ -139,16 +139,39 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
-                        NavigationBar(tonalElevation = 8.dp) {
-                            AppScreen.entries.forEach { screen ->
-                                NavigationBarItem(
-                                    selected = currentScreen == screen,
-                                    onClick = { currentScreen = screen },
-                                    label = { Text(screen.title) },
-                                    icon = {
-                                        Icon(screen.icon, contentDescription = screen.title)
-                                    }
-                                )
+                        Column {
+                            HorizontalDivider(color = Color(0xFF3A2029), thickness = 1.dp)
+                            NavigationBar(
+                                containerColor = Color(0xFF14090D),
+                                tonalElevation = 0.dp
+                            ) {
+                                AppScreen.entries.forEach { screen ->
+                                    NavigationBarItem(
+                                        selected = currentScreen == screen,
+                                        onClick = { currentScreen = screen },
+                                        label = { 
+                                            Text(
+                                                text = screen.title,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = if (currentScreen == screen) FontWeight.Medium else FontWeight.Normal
+                                            ) 
+                                        },
+                                        icon = {
+                                            Icon(
+                                                imageVector = screen.icon,
+                                                contentDescription = screen.title,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = Color(0xFFFF99C1),
+                                            selectedTextColor = Color(0xFFFF99C1),
+                                            indicatorColor = Color(0xFF37161D),
+                                            unselectedIconColor = Color(0xFFA1A1AA),
+                                            unselectedTextColor = Color(0xFFA1A1AA)
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
