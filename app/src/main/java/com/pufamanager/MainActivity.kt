@@ -427,45 +427,17 @@ fun HomeScreen(
     val presentCount = attendanceToday.count { it.isPresent }
     val paidCount = paymentsThisMonth.size
 
+    val backgroundDark = Color(0xFF14090D)
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundDark)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+        contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
     ) {
-        item { 
-            Text(
-                "Camp Overview", 
-                style = MaterialTheme.typography.headlineMedium, 
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            ) 
-        }
-        
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HomeCard("Total Players", playersCount.toString(), Modifier.weight(1f), MaterialTheme.colorScheme.primaryContainer)
-                HomeCard("Total Batches", "${batches.size}", Modifier.weight(1f), MaterialTheme.colorScheme.secondaryContainer)
-            }
-        }
-        
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                HomeCard("Present Today", "$presentCount", Modifier.weight(1f), MaterialTheme.colorScheme.tertiaryContainer)
-                HomeCard("Absent Today", "${playersCount - presentCount}", Modifier.weight(1f), MaterialTheme.colorScheme.errorContainer)
-            }
-        }
-
-        item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val nonExemptedPlayersCount = players.count { !it.isExempted }
-                HomeCard("Paid ($currentMonth)", "$paidCount", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
-                HomeCard("Not Paid", "${nonExemptedPlayersCount - paidCount}", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
-            }
-        }
-
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        item { Text("Visual Insights", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
-        
+        // 1. Hero Attendance Card
         item {
             val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
             val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
@@ -477,96 +449,166 @@ fun HomeScreen(
             )
         }
 
+        // 2. Visual Insights
         item {
-            val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
-            HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Visual Insights", 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+                val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
+                HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
+            }
         }
 
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        
-        item { Text("Alerts & Warnings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+        // 3. Camp Overview
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Camp Overview", 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HomeCard("Total Players", playersCount.toString(), Modifier.weight(1f), Color(0xFFFF99C1))
+                    HomeCard("Total Batches", "${batches.size}", Modifier.weight(1f), Color(0xFFFFC7DF))
+                }
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HomeCard("Present Today", "$presentCount", Modifier.weight(1f), Color(0xFF2CC55E))
+                    HomeCard("Absent Today", "${playersCount - presentCount}", Modifier.weight(1f), Color(0xFFEF4444))
+                }
 
-        // PART 1: Attendance Insights
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val nonExemptedPlayersCount = players.count { !it.isExempted }
+                    HomeCard("Paid ($currentMonth)", "$paidCount", Modifier.weight(1f), Color(0xFF2CC55E))
+                    HomeCard("Not Paid", "${nonExemptedPlayersCount - paidCount}", Modifier.weight(1f), Color(0xFFA1A1AA))
+                }
+            }
+        }
+
+        // 4. Alerts & Warnings
         val lowAttendance = players.map { p ->
             val pRecords = allAttendance.filter { it.playerId == p.id }
             val percent = if (pRecords.isEmpty()) 0 else (pRecords.count { it.isPresent }.toFloat() / pRecords.size * 100).toInt()
             p.name to percent
         }.filter { it.second < 75 }.sortedBy { it.second }
 
-        if (lowAttendance.isNotEmpty()) {
-            item {
-                ElevatedCard(
-                    onClick = { isAttendanceExpanded = !isAttendanceExpanded },
-                    modifier = Modifier.fillMaxWidth().animateContentSize(), 
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Low Attendance Warnings", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        val displayList = if (isAttendanceExpanded) lowAttendance.sortedBy { it.first } else lowAttendance.take(5)
-                        displayList.forEach { (name, percent) ->
-                            val color = if (percent < 50) MaterialTheme.colorScheme.error else Color(0xFFFBC02D)
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(name, style = MaterialTheme.typography.bodyMedium)
-                                Text("$percent%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color)
-                            }
-                        }
-                        if (!isAttendanceExpanded && lowAttendance.size > 5) {
-                            Text("...and ${lowAttendance.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
-                        }
-                    }
-                }
-            }
-        }
-
-        // PART 2: Fee Defaulters
         val unpaidPlayers = players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
-        if (unpaidPlayers.isNotEmpty()) {
+
+        if (lowAttendance.isNotEmpty() || unpaidPlayers.isNotEmpty()) {
             item {
-                ElevatedCard(
-                    onClick = { isDefaultersExpanded = !isDefaultersExpanded },
-                    modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Fee Defaulters (${unpaidPlayers.size})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(8.dp))
-                        val displayList = if (isDefaultersExpanded) unpaidPlayers.sortedBy { it.name } else unpaidPlayers.take(5)
-                        displayList.forEach { player ->
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                                Text("•", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(8.dp))
-                                Text(player.name, style = MaterialTheme.typography.bodyMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Alerts & Warnings", 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp,
+                        color = Color.White
+                    )
+
+                    if (lowAttendance.isNotEmpty()) {
+                        Card(
+                            onClick = { isAttendanceExpanded = !isAttendanceExpanded },
+                            modifier = Modifier.fillMaxWidth().animateContentSize(), 
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                            shape = MaterialTheme.shapes.large,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Low Attendance Warnings", fontWeight = FontWeight.Medium, color = Color(0xFFF59E0B), fontSize = 13.sp)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                val displayList = if (isAttendanceExpanded) lowAttendance.sortedBy { it.first } else lowAttendance.take(5)
+                                displayList.forEach { (name, percent) ->
+                                    val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
+                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(name, style = MaterialTheme.typography.bodySmall, color = Color.White)
+                                        Text("$percent%", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = color)
+                                    }
+                                }
+                                if (!isAttendanceExpanded && lowAttendance.size > 5) {
+                                    Text("...and ${lowAttendance.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFA1A1AA), modifier = Modifier.padding(top = 4.dp))
+                                }
                             }
                         }
-                        if (!isDefaultersExpanded && unpaidPlayers.size > 5) {
-                            Text("...and ${unpaidPlayers.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+                    }
+
+                    if (unpaidPlayers.isNotEmpty()) {
+                        Card(
+                            onClick = { isDefaultersExpanded = !isDefaultersExpanded },
+                            modifier = Modifier.fillMaxWidth().animateContentSize(),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                            shape = MaterialTheme.shapes.large,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFF99C1), modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Fee Defaulters (${unpaidPlayers.size})", fontWeight = FontWeight.Medium, color = Color.White, fontSize = 13.sp)
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                val displayList = if (isDefaultersExpanded) unpaidPlayers.sortedBy { it.name } else unpaidPlayers.take(5)
+                                displayList.forEach { player ->
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                                        Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color.White)
+                                    }
+                                }
+                                if (!isDefaultersExpanded && unpaidPlayers.size > 5) {
+                                    Text("...and ${unpaidPlayers.size - 5} others (Tap to view)", style = MaterialTheme.typography.labelSmall, color = Color(0xFFA1A1AA), modifier = Modifier.padding(top = 4.dp))
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        
+        // 5. Data Sync / Actions
         item {
-            Text("Data Sync", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = onShare, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium) {
-                    Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Share Data")
-                }
-                OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium) {
-                    Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Import")
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "Utility Actions", 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = onShare, 
+                        modifier = Modifier.weight(1f), 
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                    ) {
+                        Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share Data", fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = onImport, 
+                        modifier = Modifier.weight(1f), 
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                    ) {
+                        Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Import", fontSize = 13.sp)
+                    }
                 }
             }
         }
@@ -697,16 +739,43 @@ fun AttendanceHeroCard(
 }
 
 @Composable
-fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.surfaceVariant) {
+fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color = Color(0xFFFF99C1)) {
+    val cardBg = Color(0xFF2A1118)
+    val primaryText = Color(0xFFFFFFFF)
+    val secondaryText = Color(0xFFA1A1AA)
+
     Card(
         modifier = modifier, 
-        colors = CardDefaults.cardColors(containerColor = color),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
         shape = MaterialTheme.shapes.large
     ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Column(
+            modifier = Modifier.padding(16.dp), 
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = title, 
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.4.sp
+                ), 
+                color = secondaryText
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(accentColor, androidx.compose.foundation.shape.CircleShape)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = value, 
+                    style = MaterialTheme.typography.titleLarge, 
+                    fontWeight = FontWeight.SemiBold,
+                    color = primaryText
+                )
+            }
         }
     }
 }
@@ -714,20 +783,25 @@ fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, color:
 @Composable
 fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
     val animatedRatio by animateFloatAsState(targetValue = ratio, label = "ratio")
-    ElevatedCard(
+    val cardBg = Color(0xFF2A1118)
+    val secondaryText = Color(0xFFA1A1AA)
+
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(title, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelSmall, color = secondaryText)
             LinearProgressIndicator(
                 progress = { animatedRatio },
-                modifier = Modifier.fillMaxWidth().height(12.dp),
+                modifier = Modifier.fillMaxWidth().height(8.dp),
                 color = color,
-                trackColor = color.copy(alpha = 0.1f),
+                trackColor = Color(0xFF3A2029),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
-            Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = color)
+            Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = Color.White)
         }
     }
 }
