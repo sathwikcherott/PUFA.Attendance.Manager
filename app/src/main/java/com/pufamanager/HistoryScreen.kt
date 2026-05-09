@@ -4,10 +4,13 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pufamanager.data.entity.Attendance
 import com.pufamanager.data.entity.Batch
 import com.pufamanager.data.entity.Payment
@@ -39,26 +43,37 @@ fun HistoryScreen(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
+    val backgroundDark = Color(0xFF14090D)
+    val accentPink = Color(0xFFFF99C1)
+    val elevatedSurface = Color(0xFF37161D)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+
     var selectedSection by remember { mutableStateOf("Attendance") }
     val sections = listOf("Attendance", "Payments", "Exports")
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(backgroundDark)
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        
         Text(
-            text = "History",
-            style = MaterialTheme.typography.headlineMedium,
+            text = "Activity History",
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
         )
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
+                .padding(bottom = 20.dp),
+            space = 0.dp
         ) {
             sections.forEachIndexed { index, title ->
                 SegmentedButton(
@@ -66,12 +81,12 @@ fun HistoryScreen(
                     onClick = { selectedSection = title },
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = sections.size),
                     colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        activeContentColor = MaterialTheme.colorScheme.primary,
-                        activeBorderColor = MaterialTheme.colorScheme.outline,
-                        inactiveContainerColor = MaterialTheme.colorScheme.surface,
-                        inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        inactiveBorderColor = MaterialTheme.colorScheme.outline
+                        activeContainerColor = elevatedSurface,
+                        activeContentColor = accentPink,
+                        inactiveContainerColor = Color.Transparent,
+                        inactiveContentColor = secondaryText,
+                        activeBorderColor = dividerColor,
+                        inactiveBorderColor = dividerColor
                     )
                 ) {
                     Text(
@@ -83,7 +98,7 @@ fun HistoryScreen(
         }
 
         Box(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
             contentAlignment = Alignment.TopCenter
         ) {
             when (selectedSection) {
@@ -114,7 +129,6 @@ fun HistoryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportsSection(
     players: List<Player>,
@@ -150,13 +164,13 @@ fun ExportsSection(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(bottom = 32.dp)
     ) {
         item {
             ExportCard(
-                title = "Attendance Summary Report",
-                helperText = "Single PDF monthly summary table (P/A)",
+                title = "Attendance Summary",
+                helperText = "Monthly summary table (PDF)",
                 batches = batches,
                 months = months,
                 showMonth = true,
@@ -185,7 +199,7 @@ fun ExportsSection(
         item {
             ExportCard(
                 title = "Payment Reports",
-                helperText = "Export payment reports as PDF",
+                helperText = "Monthly financial statements (PDF)",
                 batches = batches,
                 months = months,
                 showMonth = true,
@@ -213,8 +227,8 @@ fun ExportsSection(
 
         item {
             ExportCard(
-                title = "Player List Export",
-                helperText = "Export player roster as PDF",
+                title = "Player Roster",
+                helperText = "Active player list export (PDF)",
                 batches = batches,
                 months = emptyList(),
                 showMonth = false,
@@ -255,9 +269,16 @@ fun ExportCard(
     var isExporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val primarySurface = Color(0xFF2A1118)
+    val accentPink = Color(0xFFFF99C1)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = primarySurface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -266,13 +287,14 @@ fun ExportCard(
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
                 Text(
                     text = helperText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = secondaryText
                 )
             }
 
@@ -299,18 +321,27 @@ fun ExportCard(
                             value = selectedMonth ?: "Select Month",
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Month") },
+                            label = { Text("Month", color = secondaryText) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedContainerColor = primarySurface,
+                                unfocusedContainerColor = primarySurface,
+                                focusedBorderColor = dividerColor,
+                                unfocusedBorderColor = dividerColor
+                            )
                         )
                         ExposedDropdownMenu(
                             expanded = monthExpanded,
-                            onDismissRequest = { monthExpanded = false }
+                            onDismissRequest = { monthExpanded = false },
+                            modifier = Modifier.background(primarySurface)
                         ) {
                             months.forEach { month ->
                                 DropdownMenuItem(
-                                    text = { Text(month) },
+                                    text = { Text(month, color = Color.White) },
                                     onClick = {
                                         selectedMonth = month
                                         monthExpanded = false
@@ -330,18 +361,23 @@ fun ExportCard(
                         isExporting = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium,
-                enabled = !isExporting
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = !isExporting,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White.copy(alpha = 0.05f),
+                    contentColor = Color.White
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
             ) {
                 if (isExporting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = Color.White
                     )
                 } else {
-                    Text("Export")
+                    Text("Generate Report", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -358,6 +394,13 @@ fun AttendanceHistorySection(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
+    val primarySurface = Color(0xFF2A1118)
+    val elevatedSurface = Color(0xFF37161D)
+    val accentPink = Color(0xFFFF99C1)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+    val backgroundDark = Color(0xFF14090D)
+
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
     val latestDate = remember(allAttendance) {
@@ -381,7 +424,6 @@ fun AttendanceHistorySection(
         allAttendance.filter { it.date == selectedDate }.associateBy { it.playerId }
     }
 
-    // Update pending changes when date changes or data refreshes
     LaunchedEffect(initialAttendance) {
         pendingAttendance.clear()
         initialAttendance.forEach { (pid, record) ->
@@ -393,7 +435,6 @@ fun AttendanceHistorySection(
         val currentMap = pendingAttendance.toMap()
         val initialMap = initialAttendance.mapValues { it.value.isPresent }
         
-        // Check if maps are different
         if (currentMap.size != initialMap.size) true
         else {
             currentMap.any { (pid, state) -> initialMap[pid] != state } ||
@@ -418,25 +459,28 @@ fun AttendanceHistorySection(
                 batches = batches,
                 onBatchSelected = { selectedBatch = it },
                 modifier = Modifier.weight(1f),
-                label = "Batch",
+                label = "Filter",
                 showAllOption = true
             )
 
             OutlinedCard(
                 onClick = { showDatePicker = true },
                 modifier = Modifier.weight(1f),
-                shape = MaterialTheme.shapes.medium
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = primarySurface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp), tint = accentPink)
                     Text(
                         text = selectedDate,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
                     )
                 }
             }
@@ -451,10 +495,10 @@ fun AttendanceHistorySection(
                             selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it))
                         }
                         showDatePicker = false
-                    }) { Text("OK") }
+                    }) { Text("OK", color = accentPink) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel", color = secondaryText) }
                 }
             ) {
                 DatePicker(state = datePickerState)
@@ -463,13 +507,13 @@ fun AttendanceHistorySection(
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             if (filteredPlayers.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No players found", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("No records found", style = MaterialTheme.typography.bodyMedium, color = secondaryText)
                     }
                 }
             }
@@ -480,56 +524,43 @@ fun AttendanceHistorySection(
 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = primarySurface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                fontSize = 15.sp
                             )
                             Text(
-                                text = "Year: $yearShort",
+                                text = "Born $yearShort · Batch Member",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.secondary
+                                color = secondaryText
                             )
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val presentColor by animateColorAsState(if (state == true) Color(0xFF2E7D32) else Color.LightGray.copy(alpha = 0.3f), label = "present")
-                            val absentColor by animateColorAsState(if (state == false) Color(0xFFD32F2F) else Color.LightGray.copy(alpha = 0.3f), label = "absent")
+                            AttendanceButton(
+                                label = "P",
+                                isSelected = state == true,
+                                activeColor = Color(0xFF2CC55E),
+                                onClick = { pendingAttendance[player.id] = if (state == true) null else true }
+                            )
 
-                            Button(
-                                onClick = {
-                                    pendingAttendance[player.id] = if (state == true) null else true
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = presentColor,
-                                    contentColor = if (state == true) Color.White else Color.Black
-                                ),
-                                shape = MaterialTheme.shapes.medium,
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text("Present", style = MaterialTheme.typography.labelMedium)
-                            }
-
-                            Button(
-                                onClick = {
-                                    pendingAttendance[player.id] = if (state == false) null else false
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = absentColor,
-                                    contentColor = if (state == false) Color.White else Color.Black
-                                ),
-                                shape = MaterialTheme.shapes.medium,
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Text("Absent", style = MaterialTheme.typography.labelMedium)
-                            }
+                            AttendanceButton(
+                                label = "A",
+                                isSelected = state == false,
+                                activeColor = Color(0xFFEF4444),
+                                onClick = { pendingAttendance[player.id] = if (state == false) null else false }
+                            )
                         }
                     }
                 }
@@ -541,7 +572,6 @@ fun AttendanceHistorySection(
                 onClick = {
                     scope.launch {
                         try {
-                            // Identify and apply changes
                             players.forEach { player ->
                                 val currentStatus = pendingAttendance[player.id]
                                 val initialRecord = initialAttendance[player.id]
@@ -570,10 +600,13 @@ fun AttendanceHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = MaterialTheme.shapes.medium
+                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Text("Save Changes", style = MaterialTheme.typography.titleMedium)
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Confirm Changes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -589,6 +622,15 @@ fun PaymentHistorySection(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
+    val primarySurface = Color(0xFF2A1118)
+    val elevatedSurface = Color(0xFF37161D)
+    val accentPink = Color(0xFFFF99C1)
+    val secondaryText = Color(0xFFA1A1AA)
+    val dividerColor = Color(0xFF3A2029)
+    val backgroundDark = Color(0xFF14090D)
+    val successGreen = Color(0xFF2CC55E)
+    val dangerRed = Color(0xFFEF4444)
+
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
     val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
@@ -658,7 +700,7 @@ fun PaymentHistorySection(
                 batches = batches,
                 onBatchSelected = { selectedBatch = it },
                 modifier = Modifier.weight(1f),
-                label = "Batch",
+                label = "Filter",
                 showAllOption = true
             )
 
@@ -671,18 +713,27 @@ fun PaymentHistorySection(
                     value = selectedMonth,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Month") },
+                    label = { Text("Month", color = secondaryText) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedContainerColor = primarySurface,
+                        unfocusedContainerColor = primarySurface,
+                        focusedBorderColor = dividerColor,
+                        unfocusedBorderColor = dividerColor
+                    )
                 )
                 ExposedDropdownMenu(
                     expanded = monthExpanded,
-                    onDismissRequest = { monthExpanded = false }
+                    onDismissRequest = { monthExpanded = false },
+                    modifier = Modifier.background(primarySurface)
                 ) {
                     months.forEach { month ->
                         DropdownMenuItem(
-                            text = { Text(month) },
+                            text = { Text(month, color = Color.White) },
                             onClick = {
                                 selectedMonth = month
                                 monthExpanded = false
@@ -695,13 +746,13 @@ fun PaymentHistorySection(
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             if (filteredPlayers.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No players found", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("No records found", style = MaterialTheme.typography.bodyMedium, color = secondaryText)
                     }
                 }
             }
@@ -711,62 +762,54 @@ fun PaymentHistorySection(
                 val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
 
                 val statusColor = when {
-                    isPaid -> Color(0xFF2E7D32)
-                    player.isExempted -> MaterialTheme.colorScheme.outline
-                    else -> MaterialTheme.colorScheme.error
+                    isPaid -> successGreen
+                    player.isExempted -> secondaryText
+                    else -> dangerRed
                 }
-
-                val bgColor by animateColorAsState(
-                    if (isPaid) Color(0xFF2E7D32).copy(alpha = 0.1f)
-                    else if (player.isExempted) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    else MaterialTheme.colorScheme.surface,
-                    label = "bg"
-                )
 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = bgColor)
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = primarySurface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                fontSize = 16.sp
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("Year: $yearShort", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                                
-                                val statusText = when {
-                                    isPaid -> "Paid"
-                                    player.isExempted -> "Exempt"
-                                    else -> "Unpaid"
-                                }
-                                Text(
-                                    text = statusText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = statusColor
-                                )
-
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (player.isExempted) {
                                     Surface(
                                         color = statusColor.copy(alpha = 0.1f),
-                                        shape = MaterialTheme.shapes.extraSmall
+                                        shape = RoundedCornerShape(4.dp)
                                     ) {
                                         Text(
                                             "EXEMPT",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = statusColor,
-                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
+                                } else {
+                                    Text(
+                                        text = if (isPaid) "Payment Confirmed" else "Pending Payment",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = statusColor,
+                                        fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
+                                    )
                                 }
+                                
+                                Text("·", color = secondaryText)
+                                Text("'${yearShort}", style = MaterialTheme.typography.bodySmall, color = secondaryText)
                             }
                         }
 
@@ -776,7 +819,14 @@ fun PaymentHistorySection(
                                 if (checked) pendingPayments[player.id] = true
                                 else pendingPayments.remove(player.id)
                             },
-                            modifier = Modifier.scale(0.9f)
+                            modifier = Modifier.scale(0.85f),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = successGreen,
+                                uncheckedThumbColor = secondaryText,
+                                uncheckedTrackColor = elevatedSurface,
+                                uncheckedBorderColor = dividerColor
+                            )
                         )
                     }
                 }
@@ -816,10 +866,13 @@ fun PaymentHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = MaterialTheme.shapes.medium
+                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 12.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Text("Save Changes", style = MaterialTheme.typography.titleMedium)
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Confirm Payments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
