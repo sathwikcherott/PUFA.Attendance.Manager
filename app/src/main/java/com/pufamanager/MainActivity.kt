@@ -630,25 +630,27 @@ fun HomeScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = onShare, 
-                        modifier = Modifier.weight(1f), 
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f).height(44.dp), 
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
                         Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Share Data", fontSize = 13.sp)
+                        Text("Share Data", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                     Button(
                         onClick = onImport, 
-                        modifier = Modifier.weight(1f), 
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.weight(1f).height(44.dp), 
+                        shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
+                        contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
                         Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Import", fontSize = 13.sp)
+                        Text("Import", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -1060,9 +1062,9 @@ fun AttendanceScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp)
-                .height(56.dp),
+                .height(52.dp),
             enabled = selectedBatch != null,
-            shape = MaterialTheme.shapes.medium,
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = accentPink,
                 contentColor = backgroundDark,
@@ -1070,9 +1072,9 @@ fun AttendanceScreen(
                 disabledContentColor = secondaryText
             )
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Save Attendance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("Save Attendance", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
         }
     }
 }
@@ -1178,15 +1180,17 @@ fun AttendanceButton(
 
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(height = 36.dp, width = 46.dp),
-        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.size(height = 36.dp, width = 48.dp),
+        shape = RoundedCornerShape(10.dp),
         color = bgColor
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = 13.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                ),
                 color = contentColor
             )
         }
@@ -1273,7 +1277,13 @@ fun FeesScreen(
                         inactiveBorderColor = dividerColor
                     )
                 ) {
-                    Text(label, style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        label, 
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontSize = 13.sp,
+                            fontWeight = if (filterStatus == label) FontWeight.SemiBold else FontWeight.Medium
+                        )
+                    )
                 }
             }
         }
@@ -1774,13 +1784,13 @@ fun PlayersScreen(
 
                     Button(
                         onClick = { showPlayerDialog = true }, 
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.height(40.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D)),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
-                        Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text("Player", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
@@ -1944,10 +1954,12 @@ fun PlayersScreen(
                 Spacer(Modifier.width(12.dp))
                 Button(
                     onClick = { if (newBatchName.isNotBlank()) { onAddBatch(newBatchName); newBatchName = "" } },
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D))
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.height(44.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D)),
+                    contentPadding = PaddingValues(horizontal = 16.dp)
                 ) { 
-                    Text("Add", fontWeight = FontWeight.Bold) 
+                    Text("Add", fontWeight = FontWeight.Bold, fontSize = 14.sp) 
                 }
             }
         }
@@ -2182,18 +2194,45 @@ fun PlayerDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text("Fee Status", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    val chipBorderColor = Color(0xFF3A2029)
                     FilterChip(
                         selected = !isExempted,
                         onClick = { isExempted = false },
-                        label = { Text("Regular") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Regular", fontSize = 13.sp) },
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = !isExempted,
+                            borderColor = chipBorderColor,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            borderWidth = 1.dp
+                        )
                     )
                     FilterChip(
                         selected = isExempted,
                         onClick = { isExempted = true },
-                        label = { Text("Exempted") },
-                        modifier = Modifier.weight(1f)
+                        label = { Text("Exempted", fontSize = 13.sp) },
+                        modifier = Modifier.weight(1f).height(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isExempted,
+                            borderColor = chipBorderColor,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                            borderWidth = 1.dp
+                        )
                     )
                 }
 

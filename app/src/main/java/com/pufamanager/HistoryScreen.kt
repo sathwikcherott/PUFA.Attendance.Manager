@@ -615,13 +615,13 @@ fun AttendanceHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp).padding(bottom = 12.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Confirm Changes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Confirm Changes", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
             }
         }
     }
@@ -884,13 +884,13 @@ fun PaymentHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(56.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp).padding(bottom = 12.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Icon(Icons.Default.Check, null, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Confirm Payments", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Confirm Payments", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
             }
         }
     }
