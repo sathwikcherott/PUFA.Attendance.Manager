@@ -86,8 +86,14 @@ fun AttendanceScreen(
                 )
             }
             
-            val batchPlayersCount = players.count { it.batchId == selectedBatch?.id }
-            val pCount = players.filter { it.batchId == selectedBatch?.id }.count { attendanceMap[it.id] == true }
+            val batchPlayersCount = remember(players, selectedBatch) {
+                players.count { it.batchId == selectedBatch?.id }
+            }
+            val derivedPCount by remember(players, selectedBatch) {
+                derivedStateOf {
+                    players.filter { it.batchId == selectedBatch?.id }.count { attendanceMap[it.id] == true }
+                }
+            }
             
             if (batchPlayersCount > 0) {
                 Surface(
@@ -95,7 +101,7 @@ fun AttendanceScreen(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "$pCount / $batchPlayersCount Present",
+                        text = "$derivedPCount / $batchPlayersCount Present",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFF2CC55E),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -124,7 +130,9 @@ fun AttendanceScreen(
                 Text("Please create a batch first", style = MaterialTheme.typography.bodyLarge, color = secondaryText)
             }
         } else {
-            val batchPlayers = players.filter { it.batchId == selectedBatch?.id }.sortedBy { it.name }
+            val batchPlayers = remember(players, selectedBatch) {
+                players.filter { it.batchId == selectedBatch?.id }.sortedBy { it.name }
+            }
             if (batchPlayers.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text("No players in this batch", style = MaterialTheme.typography.bodyMedium, color = secondaryText)

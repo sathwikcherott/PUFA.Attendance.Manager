@@ -95,7 +95,9 @@ fun PlayersScreen(
 
     batchToRename?.let { batch ->
         var editedName by remember { mutableStateOf(batch.name) }
-        val isDuplicate = batches.any { it.name.equals(editedName, ignoreCase = true) && it.id != batch.id }
+        val isDuplicate = remember(editedName, batches) { 
+            batches.any { it.name.equals(editedName, ignoreCase = true) && it.id != batch.id }
+        }
 
         AlertDialog(
             onDismissRequest = { batchToRename = null },

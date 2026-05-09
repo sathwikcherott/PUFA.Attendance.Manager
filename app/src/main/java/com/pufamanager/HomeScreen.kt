@@ -35,11 +35,33 @@ fun HomeScreen(
     var isAttendanceExpanded by remember { mutableStateOf(false) }
     var isDefaultersExpanded by remember { mutableStateOf(false) }
     
-    val playersCount = players.size
-    val presentCount = attendanceToday.count { it.isPresent }
-    val paidCount = paymentsThisMonth.size
+    val playersCount = remember(players) { players.size }
+    val presentCount = remember(attendanceToday) { attendanceToday.count { it.isPresent } }
+    val paidCount = remember(paymentsThisMonth) { paymentsThisMonth.size }
 
     val backgroundDark = Color(0xFF14090D)
+
+    val attendanceRatio = remember(playersCount, presentCount) {
+        if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
+    }
+    val lastUpdated = remember(attendanceToday) {
+        attendanceToday.maxOfOrNull { it.lastUpdated }
+    }
+    val paymentRatio = remember(playersCount, paidCount) {
+        if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
+    }
+
+    val lowAttendance = remember(players, allAttendance) {
+        players.map { p ->
+            val pRecords = allAttendance.filter { it.playerId == p.id }
+            val percent = if (pRecords.isEmpty()) 0 else (pRecords.count { it.isPresent }.toFloat() / pRecords.size * 100).toInt()
+            p.name to percent
+        }.filter { it.second < 75 }.sortedBy { it.second }
+    }
+
+    val unpaidPlayers = remember(players, paymentsThisMonth) {
+        players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -51,8 +73,6 @@ fun HomeScreen(
     ) {
         // 1. Hero Attendance Card
         item(key = "attendance_hero") {
-            val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
-            val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
             AttendanceHeroCard(
                 attendanceRatio = attendanceRatio,
                 presentCount = presentCount,
@@ -72,7 +92,6 @@ fun HomeScreen(
                     ),
                     color = Color.White
                 )
-                val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
                 HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
             }
         }
@@ -108,14 +127,6 @@ fun HomeScreen(
         }
 
         // 4. Alerts & Warnings
-        val lowAttendance = players.map { p ->
-            val pRecords = allAttendance.filter { it.playerId == p.id }
-            val percent = if (pRecords.isEmpty()) 0 else (pRecords.count { it.isPresent }.toFloat() / pRecords.size * 100).toInt()
-            p.name to percent
-        }.filter { it.second < 75 }.sortedBy { it.second }
-
-        val unpaidPlayers = players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
-
         if (lowAttendance.isNotEmpty() || unpaidPlayers.isNotEmpty()) {
             item(key = "alerts_warnings") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

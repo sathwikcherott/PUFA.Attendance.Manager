@@ -50,10 +50,12 @@ fun FeesScreen(
     var customAmount by remember { mutableStateOf("500") }
     var feeDropdownExpanded by remember { mutableStateOf(false) }
 
-    val currentFeeValue = if (selectedFeeOption == "Custom") {
-        customAmount.toDoubleOrNull() ?: 0.0
-    } else {
-        selectedFeeOption.toDouble()
+    val currentFeeValue = remember(selectedFeeOption, customAmount) {
+        if (selectedFeeOption == "Custom") {
+            customAmount.toDoubleOrNull() ?: 0.0
+        } else {
+            selectedFeeOption.toDouble()
+        }
     }
 
     val displayPlayers = remember(players, selectedBatch, filterStatus, paymentsThisMonth) {

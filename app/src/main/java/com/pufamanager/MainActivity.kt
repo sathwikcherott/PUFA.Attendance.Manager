@@ -122,8 +122,12 @@ class MainActivity : ComponentActivity() {
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val currentMonth = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
                 
-                val attendanceToday = allAttendance.filter { it.date == todayDate }
-                val paymentsThisMonth = allPayments.filter { it.month == currentMonth }
+                val attendanceToday = remember(allAttendance, todayDate) { 
+                    allAttendance.filter { it.date == todayDate } 
+                }
+                val paymentsThisMonth = remember(allPayments, currentMonth) { 
+                    allPayments.filter { it.month == currentMonth } 
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),

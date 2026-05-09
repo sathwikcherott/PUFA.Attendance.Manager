@@ -150,8 +150,8 @@ fun ExportsSection(
     allPayments: List<Payment>
 ) {
     val context = LocalContext.current
-    val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
     val months = remember(allPayments) {
+        val currentMonthStr = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
         val list = allPayments.map { it.month }.distinct().toMutableList()
         if (!list.contains(currentMonthStr)) list.add(0, currentMonthStr)
         list.sortedWith { m1, m2 ->
@@ -423,7 +423,7 @@ fun AttendanceHistorySection(
     val latestDate = remember(allAttendance) {
         allAttendance.map { it.date }.maxOrNull() ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
-    var selectedDate by remember { mutableStateOf(latestDate) }
+    var selectedDate by remember(latestDate) { mutableStateOf(latestDate) }
     var showDatePicker by remember { mutableStateOf(false) }
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = try {
@@ -448,14 +448,16 @@ fun AttendanceHistorySection(
         }
     }
 
-    val hasChanges = remember(pendingAttendance, initialAttendance) {
-        val currentMap = pendingAttendance.toMap()
-        val initialMap = initialAttendance.mapValues { it.value.isPresent }
-        
-        if (currentMap.size != initialMap.size) true
-        else {
-            currentMap.any { (pid, state) -> initialMap[pid] != state } ||
-            initialMap.any { (pid, state) -> currentMap[pid] != state }
+    val hasChanges by remember(initialAttendance) {
+        derivedStateOf {
+            val currentMap = pendingAttendance.toMap()
+            val initialMap = initialAttendance.mapValues { it.value.isPresent }
+            
+            if (currentMap.size != initialMap.size) true
+            else {
+                currentMap.any { (pid, state) -> initialMap[pid] != state } ||
+                initialMap.any { (pid, state) -> currentMap[pid] != state }
+            }
         }
     }
 
@@ -671,7 +673,7 @@ fun PaymentHistorySection(
         }
     }
     
-    var selectedMonth by remember { mutableStateOf(months.firstOrNull() ?: currentMonthStr) }
+    var selectedMonth by remember(months) { mutableStateOf(months.firstOrNull() ?: currentMonthStr) }
     var monthExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -689,28 +691,32 @@ fun PaymentHistorySection(
         }
     }
 
-    val hasChanges = remember(pendingPayments, initialPayments) {
-        val currentPids = pendingPayments.keys
-        val initialPids = initialPayments.keys
-        
-        currentPids.size != initialPids.size || 
-        currentPids.any { it !in initialPids } ||
-        initialPids.any { it !in currentPids }
+    val hasChanges by remember(initialPayments) {
+        derivedStateOf {
+            val currentPids = pendingPayments.keys
+            val initialPids = initialPayments.keys
+            
+            currentPids.size != initialPids.size || 
+            currentPids.any { it !in initialPids } ||
+            initialPids.any { it !in currentPids }
+        }
     }
 
-    val filteredPlayers = remember(players, selectedBatch, pendingPayments, selectedMonth) {
-        val batchPlayers = players.filter { player ->
-            selectedBatch == null || player.batchId == selectedBatch?.id
-        }
-        
-        batchPlayers.sortedWith(compareBy<Player> { p ->
-            val isPaid = pendingPayments.containsKey(p.id)
-            when {
-                isPaid -> 0
-                !p.isExempted -> 1
-                else -> 2
+    val filteredPlayers by remember(players, selectedBatch, selectedMonth) {
+        derivedStateOf {
+            val batchPlayers = players.filter { player ->
+                selectedBatch == null || player.batchId == selectedBatch?.id
             }
-        }.thenBy { it.name })
+            
+            batchPlayers.sortedWith(compareBy<Player> { p ->
+                val isPaid = pendingPayments.containsKey(p.id)
+                when {
+                    isPaid -> 0
+                    !p.isExempted -> 1
+                    else -> 2
+                }
+            }.thenBy { it.name })
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
