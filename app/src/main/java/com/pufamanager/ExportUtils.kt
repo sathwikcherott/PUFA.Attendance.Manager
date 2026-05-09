@@ -1,148 +1,283 @@
 package com.pufamanager
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import com.pufamanager.data.entity.Attendance
 import com.pufamanager.data.entity.Batch
+import com.pufamanager.data.entity.Payment
 import com.pufamanager.data.entity.Player
 import java.io.File
 import java.io.FileOutputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 object ExportUtils {
 
-    fun generateAttendanceZip(
+    private const val PAGE_WIDTH = 595
+    private const val PAGE_HEIGHT = 842
+    private const val MARGIN = 50f
+
+    fun generatePlayerListPdf(context: Context, batch: Batch, players: List<Player>): File {
+        val sortedPlayers = players.sortedBy { it.name }
+        val pdfDocument = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
+        var page = pdfDocument.startPage(pageInfo)
+        var canvas = page.canvas
+        val paint = Paint()
+        var y = MARGIN
+
+        // Header
+        y = drawHeader(canvas, paint, "Player Roster", y)
+        
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        paint.textSize = 14f
+        canvas.drawText("Batch: ${batch.name}", MARGIN, y, paint)
+        y += 20f
+        canvas.drawText("Total Players: ${sortedPlayers.size}", MARGIN, y, paint)
+        y += 20f
+        val exportDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
+        canvas.drawText("Export Date: $exportDate", MARGIN, y, paint)
+        y += 40f
+
+        // Table Header
+        val nameColWidth = 350f
+        val rowHeight = 25f
+        
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1f
+        canvas.drawRect(MARGIN, y, PAGE_WIDTH - MARGIN, y + rowHeight, paint)
+        canvas.drawLine(MARGIN + nameColWidth, y, MARGIN + nameColWidth, y + rowHeight, paint)
+
+        paint.style = Paint.Style.FILL
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        paint.textSize = 12f
+        canvas.drawText("Player Name", MARGIN + 10f, y + 18f, paint)
+        canvas.drawText("YOB", MARGIN + nameColWidth + 10f, y + 18f, paint)
+        y += rowHeight
+
+        // Table Rows
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        sortedPlayers.forEach { player ->
+            if (y > PAGE_HEIGHT - MARGIN - rowHeight) {
+                pdfDocument.finishPage(page)
+                page = pdfDocument.startPage(pageInfo)
+                canvas = page.canvas
+                y = MARGIN
+            }
+            
+            paint.style = Paint.Style.STROKE
+            canvas.drawRect(MARGIN, y, PAGE_WIDTH - MARGIN, y + rowHeight, paint)
+            canvas.drawLine(MARGIN + nameColWidth, y, MARGIN + nameColWidth, y + rowHeight, paint)
+            
+            paint.style = Paint.Style.FILL
+            canvas.drawText(player.name, MARGIN + 10f, y + 18f, paint)
+            canvas.drawText(player.yearOfBirth.toString(), MARGIN + nameColWidth + 10f, y + 18f, paint)
+            y += rowHeight
+        }
+
+        pdfDocument.finishPage(page)
+        val file = File(context.cacheDir, "${batch.name.replace(" ", "_")}_PlayerList.pdf")
+        pdfDocument.writeTo(FileOutputStream(file))
+        pdfDocument.close()
+        return file
+    }
+
+    fun generatePaymentReportPdf(
+        context: Context,
+        batch: Batch,
+        month: String,
+        players: List<Player>,
+        payments: List<Payment>
+    ): File? {
+        val batchPlayers = players.filter { it.batchId == batch.id }
+        val monthPayments = payments.filter { it.month == month }
+        
+        val paidPlayers = batchPlayers.filter { p -> monthPayments.any { it.playerId == p.id } }.sortedBy { it.name }
+        val exemptPlayers = batchPlayers.filter { it.isExempted }.sortedBy { it.name }
+        val unpaidPlayers = batchPlayers.filter { !it.isExempted && monthPayments.none { pay -> pay.playerId == it.id } }.sortedBy { it.name }
+
+        val pdfDocument = PdfDocument()
+        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
+        var page = pdfDocument.startPage(pageInfo)
+        var canvas = page.canvas
+        val paint = Paint()
+        var y = MARGIN
+
+        y = drawHeader(canvas, paint, "Payment Report", y)
+        
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        paint.textSize = 14f
+        canvas.drawText("Batch: ${batch.name}", MARGIN, y, paint)
+        y += 20f
+        canvas.drawText("Month: $month", MARGIN, y, paint)
+        y += 20f
+        canvas.drawText("Summary: ${paidPlayers.size} Paid, ${unpaidPlayers.size} Unpaid, ${exemptPlayers.size} Exempt", MARGIN, y, paint)
+        y += 40f
+
+        fun drawSection(title: String, list: List<Player>) {
+            if (y > PAGE_HEIGHT - MARGIN - 60f) {
+                pdfDocument.finishPage(page)
+                page = pdfDocument.startPage(pageInfo)
+                canvas = page.canvas
+                y = MARGIN
+            }
+            
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            paint.textSize = 14f
+            canvas.drawText(title, MARGIN, y, paint)
+            y += 25f
+            
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            paint.textSize = 12f
+            if (list.isEmpty()) {
+                canvas.drawText("None", MARGIN + 20f, y, paint)
+                y += 20f
+            } else {
+                list.forEach { player ->
+                    if (y > PAGE_HEIGHT - MARGIN - 20f) {
+                        pdfDocument.finishPage(page)
+                        page = pdfDocument.startPage(pageInfo)
+                        canvas = page.canvas
+                        y = MARGIN
+                    }
+                    canvas.drawText("• ${player.name}", MARGIN + 20f, y, paint)
+                    y += 20f
+                }
+            }
+            y += 15f
+        }
+
+        drawSection("PAID PLAYERS", paidPlayers)
+        drawSection("UNPAID PLAYERS", unpaidPlayers)
+        drawSection("EXEMPT PLAYERS", exemptPlayers)
+
+        pdfDocument.finishPage(page)
+        val file = File(context.cacheDir, "${batch.name.replace(" ", "_")}_PaymentReport_${month.replace(" ", "_")}.pdf")
+        pdfDocument.writeTo(FileOutputStream(file))
+        pdfDocument.close()
+        return file
+    }
+
+    fun generateAttendanceSummaryPdf(
         context: Context,
         batch: Batch,
         month: String,
         players: List<Player>,
         attendanceList: List<Attendance>
     ): File? {
-        val batchPlayers = players.filter { it.batchId == batch.id }
-        val monthAttendance = attendanceList.filter { it.date.startsWith(monthToDatePrefix(month)) }
+        val batchPlayers = players.filter { it.batchId == batch.id }.sortedBy { it.name }
+        val monthPrefix = monthToDatePrefix(month)
+        val monthAttendance = attendanceList.filter { it.date.startsWith(monthPrefix) }
         val dates = monthAttendance.map { it.date }.distinct().sorted()
 
         if (dates.isEmpty()) return null
 
-        val pdfFiles = mutableListOf<File>()
-        dates.forEach { date ->
-            val dateAttendance = monthAttendance.filter { it.date == date }
-            val presentPlayers = batchPlayers.filter { p -> dateAttendance.find { it.playerId == p.id }?.isPresent == true }.sortedBy { it.name }
-            val absentPlayers = batchPlayers.filter { p -> dateAttendance.find { it.playerId == p.id }?.isPresent == false }.sortedBy { it.name }
-
-            val pdfFile = createAttendancePdf(context, batch, date, presentPlayers, absentPlayers)
-            pdfFiles.add(pdfFile)
-        }
-
-        val zipFile = File(context.cacheDir, "${batch.name.replace(" ", "_")}.zip")
-        ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
-            pdfFiles.forEach { file ->
-                zos.putNextEntry(ZipEntry(file.name))
-                file.inputStream().use { it.copyTo(zos) }
-                zos.closeEntry()
-                file.delete() // Clean up individual PDFs
-            }
-        }
-        return zipFile
-    }
-
-    private fun createAttendancePdf(
-        context: Context,
-        batch: Batch,
-        date: String,
-        present: List<Player>,
-        absent: List<Player>
-    ): File {
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+        val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
         var page = pdfDocument.startPage(pageInfo)
         var canvas = page.canvas
         val paint = Paint()
-        var y = 50f
+        var y = MARGIN
 
-        // Header
-        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 20f
-        canvas.drawText("PUFA Manager Hub", 50f, y, paint)
-        y += 25f
-        paint.textSize = 16f
-        canvas.drawText("Attendance Report", 50f, y, paint)
-        y += 35f
+        y = drawHeader(canvas, paint, "Attendance Summary Report", y)
 
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         paint.textSize = 14f
-        canvas.drawText("Batch: ${batch.name}", 50f, y, paint)
+        canvas.drawText("Batch: ${batch.name}", MARGIN, y, paint)
         y += 20f
-        canvas.drawText("Date: $date", 50f, y, paint)
+        canvas.drawText("Month: $month", MARGIN, y, paint)
+        y += 20f
+        canvas.drawText("Total Attendance Days: ${dates.size}", MARGIN, y, paint)
         y += 40f
 
-        // Present Section
-        paint.textSize = 14f
-        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        canvas.drawText("Present Players", 50f, y, paint)
-        y += 25f
-        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        paint.textSize = 12f
-        if (present.isEmpty()) {
-            canvas.drawText("None", 70f, y, paint)
-            y += 20f
-        } else {
-            present.forEach { player ->
-                if (y > 780) {
-                    pdfDocument.finishPage(page)
-                    page = pdfDocument.startPage(pageInfo)
-                    canvas = page.canvas
-                    y = 50f
-                }
-                canvas.drawText("• ${player.name}", 70f, y, paint)
-                y += 20f
-            }
-        }
+        // Table setup
+        val availableWidth = PAGE_WIDTH - 2 * MARGIN
+        val nameColWidth = 140f
+        val totalColWidth = 40f
+        val dateColWidth = (availableWidth - nameColWidth - totalColWidth) / dates.size.coerceAtLeast(1)
+        val rowHeight = 25f
 
-        y += 20f
-
-        // Absent Section
-        if (y > 750) {
-            pdfDocument.finishPage(page)
-            page = pdfDocument.startPage(pageInfo)
-            canvas = page.canvas
-            y = 50f
-        }
+        // Draw Table Header
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1f
+        canvas.drawRect(MARGIN, y, PAGE_WIDTH - MARGIN, y + rowHeight, paint)
+        
+        paint.style = Paint.Style.FILL
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        paint.textSize = 14f
-        canvas.drawText("Absent Players", 50f, y, paint)
-        y += 25f
+        paint.textSize = 10f
+        canvas.drawText("Player", MARGIN + 5f, y + 17f, paint)
+        
+        dates.forEachIndexed { index, date ->
+            val dateNum = date.substring(8) // "yyyy-MM-dd" -> "dd"
+            val x = MARGIN + nameColWidth + (index * dateColWidth)
+            canvas.drawText(dateNum, x + (dateColWidth / 2) - 5f, y + 17f, paint)
+        }
+        canvas.drawText("Total", MARGIN + nameColWidth + (dates.size * dateColWidth) + 5f, y + 17f, paint)
+        
+        y += rowHeight
+
+        // Draw Player Rows
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        paint.textSize = 12f
-        if (absent.isEmpty()) {
-            canvas.drawText("None", 70f, y, paint)
-            y += 20f
-        } else {
-            absent.forEach { player ->
-                if (y > 780) {
-                    pdfDocument.finishPage(page)
-                    page = pdfDocument.startPage(pageInfo)
-                    canvas = page.canvas
-                    y = 50f
-                }
-                canvas.drawText("• ${player.name}", 70f, y, paint)
-                y += 20f
+        batchPlayers.forEach { player ->
+            if (y > PAGE_HEIGHT - MARGIN - rowHeight) {
+                pdfDocument.finishPage(page)
+                page = pdfDocument.startPage(pageInfo)
+                canvas = page.canvas
+                y = MARGIN
             }
+
+            paint.style = Paint.Style.STROKE
+            canvas.drawRect(MARGIN, y, PAGE_WIDTH - MARGIN, y + rowHeight, paint)
+            
+            paint.style = Paint.Style.FILL
+            val displayName = if (player.name.length > 20) player.name.take(17) + "..." else player.name
+            canvas.drawText(displayName, MARGIN + 5f, y + 17f, paint)
+
+            var presentCount = 0
+            dates.forEachIndexed { index, date ->
+                val att = monthAttendance.find { it.playerId == player.id && it.date == date }
+                val status = when (att?.isPresent) {
+                    true -> {
+                        presentCount++
+                        "P"
+                    }
+                    false -> "A"
+                    else -> "-"
+                }
+                val x = MARGIN + nameColWidth + (index * dateColWidth)
+                canvas.drawText(status, x + (dateColWidth / 2) - 5f, y + 17f, paint)
+            }
+            canvas.drawText(presentCount.toString(), MARGIN + nameColWidth + (dates.size * dateColWidth) + 15f, y + 17f, paint)
+            
+            y += rowHeight
         }
 
         pdfDocument.finishPage(page)
-        val file = File(context.cacheDir, "$date.pdf")
+        val file = File(context.cacheDir, "${batch.name.replace(" ", "_")}_Attendance_Summary_${month.replace(" ", "_")}.pdf")
         pdfDocument.writeTo(FileOutputStream(file))
         pdfDocument.close()
         return file
     }
 
+    private fun drawHeader(canvas: Canvas, paint: Paint, subtitle: String, startY: Float): Float {
+        var y = startY
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        paint.textSize = 22f
+        canvas.drawText("PUFA Manager Hub", MARGIN, y, paint)
+        y += 30f
+        paint.textSize = 18f
+        canvas.drawText(subtitle, MARGIN, y, paint)
+        y += 35f
+        return y
+    }
+
     private fun monthToDatePrefix(month: String): String {
         return try {
-            val date = java.text.SimpleDateFormat("MMMM yyyy", java.util.Locale.getDefault()).parse(month)
-            java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.getDefault()).format(date!!)
+            val date = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).parse(month)
+            SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(date!!)
         } catch (e: Exception) {
             ""
         }

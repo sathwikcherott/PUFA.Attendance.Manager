@@ -139,12 +139,13 @@ fun ExportsSection(
 
     fun shareFile(file: File) {
         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+        val mimeType = if (file.extension == "zip") "application/zip" else "application/pdf"
         val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-            type = "application/zip"
+            type = mimeType
             putExtra(android.content.Intent.EXTRA_STREAM, uri)
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(android.content.Intent.createChooser(intent, "Share Attendance Reports"))
+        context.startActivity(android.content.Intent.createChooser(intent, "Share Report"))
     }
 
     LazyColumn(
@@ -154,8 +155,8 @@ fun ExportsSection(
     ) {
         item {
             ExportCard(
-                title = "Attendance Reports",
-                helperText = "Export daily attendance PDFs as ZIP",
+                title = "Attendance Summary Report",
+                helperText = "Single PDF monthly summary table (P/A)",
                 batches = batches,
                 months = months,
                 showMonth = true,
@@ -165,11 +166,11 @@ fun ExportsSection(
                         return@ExportCard
                     }
                     try {
-                        val zipFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            ExportUtils.generateAttendanceZip(context, batch, month, players, allAttendance)
+                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            ExportUtils.generateAttendanceSummaryPdf(context, batch, month, players, allAttendance)
                         }
-                        if (zipFile != null) {
-                            shareFile(zipFile)
+                        if (pdfFile != null) {
+                            shareFile(pdfFile)
                             Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "No attendance records found", Toast.LENGTH_SHORT).show()
@@ -184,12 +185,28 @@ fun ExportsSection(
         item {
             ExportCard(
                 title = "Payment Reports",
-                helperText = "Export payment reports as ZIP",
+                helperText = "Export payment reports as PDF",
                 batches = batches,
                 months = months,
                 showMonth = true,
-                onExport = { _, _ ->
-                    Toast.makeText(context, "Payment export coming soon", Toast.LENGTH_SHORT).show()
+                onExport = { batch, month ->
+                    if (batch == null || month == null) {
+                        Toast.makeText(context, "Please select batch and month", Toast.LENGTH_SHORT).show()
+                        return@ExportCard
+                    }
+                    try {
+                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            ExportUtils.generatePaymentReportPdf(context, batch, month, players, allPayments)
+                        }
+                        if (pdfFile != null) {
+                            shareFile(pdfFile)
+                            Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No payment records found", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
         }
@@ -201,8 +218,21 @@ fun ExportsSection(
                 batches = batches,
                 months = emptyList(),
                 showMonth = false,
-                onExport = { _, _ ->
-                    Toast.makeText(context, "Player list export coming soon", Toast.LENGTH_SHORT).show()
+                onExport = { batch, _ ->
+                    if (batch == null) {
+                        Toast.makeText(context, "Please select a batch", Toast.LENGTH_SHORT).show()
+                        return@ExportCard
+                    }
+                    try {
+                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            val batchPlayers = players.filter { it.batchId == batch.id }
+                            ExportUtils.generatePlayerListPdf(context, batch, batchPlayers)
+                        }
+                        shareFile(pdfFile)
+                        Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
         }

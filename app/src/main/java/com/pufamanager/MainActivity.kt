@@ -51,7 +51,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 enum class AppScreen(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Dashboard("Dashboard", Icons.Default.Home),
+    Home("Home", Icons.Default.Home),
     Attendance("Attendance", Icons.Default.Done),
     Fees("Fees", Icons.Default.Star),
     Players("Players", Icons.Default.Person),
@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PUFAAttendanceManagerTheme {
-                var currentScreen by remember { mutableStateOf(AppScreen.Dashboard) }
+                var currentScreen by remember { mutableStateOf(AppScreen.Home) }
                 val scope = rememberCoroutineScope()
                 val context = LocalContext.current
                 
@@ -152,7 +152,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                         when (currentScreen) {
-                            AppScreen.Dashboard -> DashboardScreen(
+                            AppScreen.Home -> HomeScreen(
                                 players = players,
                                 batches = batches,
                                 attendanceToday = attendanceToday,
@@ -407,7 +407,7 @@ class MainActivity : ComponentActivity() {
 class AppData(var batches: List<Batch>, var students: List<Player>, var attendance: Map<String, Map<Int, String>>, var payments: List<Payment>)
 
 @Composable
-fun DashboardScreen(
+fun HomeScreen(
     players: List<Player>,
     batches: List<Batch>,
     attendanceToday: List<Attendance>,
@@ -440,23 +440,23 @@ fun DashboardScreen(
         
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DashboardCard("Total Players", playersCount.toString(), Modifier.weight(1f), MaterialTheme.colorScheme.primaryContainer)
-                DashboardCard("Total Batches", "${batches.size}", Modifier.weight(1f), MaterialTheme.colorScheme.secondaryContainer)
+                HomeCard("Total Players", playersCount.toString(), Modifier.weight(1f), MaterialTheme.colorScheme.primaryContainer)
+                HomeCard("Total Batches", "${batches.size}", Modifier.weight(1f), MaterialTheme.colorScheme.secondaryContainer)
             }
         }
         
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DashboardCard("Present Today", "$presentCount", Modifier.weight(1f), MaterialTheme.colorScheme.tertiaryContainer)
-                DashboardCard("Absent Today", "${playersCount - presentCount}", Modifier.weight(1f), MaterialTheme.colorScheme.errorContainer)
+                HomeCard("Present Today", "$presentCount", Modifier.weight(1f), MaterialTheme.colorScheme.tertiaryContainer)
+                HomeCard("Absent Today", "${playersCount - presentCount}", Modifier.weight(1f), MaterialTheme.colorScheme.errorContainer)
             }
         }
 
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val nonExemptedPlayersCount = players.count { !it.isExempted }
-                DashboardCard("Paid ($currentMonth)", "$paidCount", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
-                DashboardCard("Not Paid", "${nonExemptedPlayersCount - paidCount}", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
+                HomeCard("Paid ($currentMonth)", "$paidCount", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
+                HomeCard("Not Paid", "${nonExemptedPlayersCount - paidCount}", Modifier.weight(1f), MaterialTheme.colorScheme.surfaceVariant)
             }
         }
 
@@ -554,18 +554,18 @@ fun DashboardScreen(
         
         item {
             val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
-            DashboardChartCard("Today's Attendance", attendanceRatio, "${(attendanceRatio * 100).toInt()}% Present", MaterialTheme.colorScheme.primary)
+            HomeChartCard("Today's Attendance", attendanceRatio, "${(attendanceRatio * 100).toInt()}% Present", MaterialTheme.colorScheme.primary)
         }
 
         item {
             val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
-            DashboardChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
+            HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
         }
     }
 }
 
 @Composable
-fun DashboardCard(title: String, value: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.surfaceVariant) {
+fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.surfaceVariant) {
     Card(
         modifier = modifier, 
         colors = CardDefaults.cardColors(containerColor = color),
@@ -580,7 +580,7 @@ fun DashboardCard(title: String, value: String, modifier: Modifier = Modifier, c
 }
 
 @Composable
-fun DashboardChartCard(title: String, ratio: Float, label: String, color: Color) {
+fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
     val animatedRatio by animateFloatAsState(targetValue = ratio, label = "ratio")
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -1107,7 +1107,6 @@ fun PlayersScreen(
     var editingPlayer by remember { mutableStateOf<Player?>(null) }
     var viewingPlayerDetails by remember { mutableStateOf<Player?>(null) }
     var newBatchName by remember { mutableStateOf("") }
-    var showListMenu by remember { mutableStateOf(false) }
 
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -1243,48 +1242,6 @@ fun PlayersScreen(
                     
                     IconButton(onClick = { isSearchActive = true }) {
                         Icon(Icons.Default.Search, "Search", tint = MaterialTheme.colorScheme.primary)
-                    }
-
-                    Box {
-                        OutlinedButton(
-                            onClick = { showListMenu = true },
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Icon(Icons.Default.List, null)
-                            Spacer(Modifier.width(4.dp))
-                            Text("List")
-                        }
-                        DropdownMenu(
-                            expanded = showListMenu,
-                            onDismissRequest = { showListMenu = false }
-                        ) {
-                            val context = LocalContext.current
-                            val scope = rememberCoroutineScope()
-                            batches.forEach { batch ->
-                                DropdownMenuItem(
-                                    text = { Text(batch.name) },
-                                    onClick = {
-                                        showListMenu = false
-                                        val batchPlayers = players.filter { it.batchId == batch.id }
-                                        scope.launch {
-                                            try {
-                                                val file = createBatchListPdf(context, batch, batchPlayers)
-                                                val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                                    type = "application/pdf"
-                                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                }
-                                                context.startActivity(android.content.Intent.createChooser(intent, "Share Player List"))
-                                            } catch (e: Exception) {
-                                                android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                        }
                     }
 
                     Button(onClick = { showPlayerDialog = true }, shape = MaterialTheme.shapes.medium) {
@@ -1632,70 +1589,4 @@ fun PlayerDialog(
     )
 }
 
-
-fun createBatchListPdf(context: android.content.Context, batch: Batch, players: List<Player>): File {
-    val sortedPlayers = players.sortedBy { it.name }
-    val pdfDocument = PdfDocument()
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-    var page = pdfDocument.startPage(pageInfo)
-    var canvas = page.canvas
-    val paint = Paint()
-    var y = 50f
-
-    // Header
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    paint.textSize = 20f
-    canvas.drawText("PUFA Manager Hub", 50f, y, paint)
-    y += 35f
-
-    paint.textSize = 14f
-    canvas.drawText("Batch: ${batch.name}", 50f, y, paint)
-    y += 30f
-
-    // Table Header
-    val startX = 50f
-    val endX = 545f
-    val nameColWidth = 350f
-    val rowHeight = 25f
-
-    paint.strokeWidth = 1f
-    paint.style = Paint.Style.STROKE
-    canvas.drawRect(startX, y, endX, y + rowHeight, paint)
-    canvas.drawLine(startX + nameColWidth, y, startX + nameColWidth, y + rowHeight, paint)
-
-    paint.style = Paint.Style.FILL
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-    canvas.drawText("Player Name", startX + 10f, y + 18f, paint)
-    canvas.drawText("YOB", startX + nameColWidth + 10f, y + 18f, paint)
-    
-    y += rowHeight
-
-    // Table Rows
-    paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-    sortedPlayers.forEach { player ->
-        if (y > 780) {
-            pdfDocument.finishPage(page)
-            page = pdfDocument.startPage(pageInfo)
-            canvas = page.canvas
-            y = 50f
-            // Redraw table header on new page if needed? (optional, keeping it simple)
-        }
-        
-        paint.style = Paint.Style.STROKE
-        canvas.drawRect(startX, y, endX, y + rowHeight, paint)
-        canvas.drawLine(startX + nameColWidth, y, startX + nameColWidth, y + rowHeight, paint)
-        
-        paint.style = Paint.Style.FILL
-        canvas.drawText(player.name, startX + 10f, y + 18f, paint)
-        canvas.drawText(player.yearOfBirth.toString(), startX + nameColWidth + 10f, y + 18f, paint)
-        
-        y += rowHeight
-    }
-
-    pdfDocument.finishPage(page)
-    val file = File(context.cacheDir, "${batch.name.replace(" ", "_")}_List.pdf")
-    pdfDocument.writeTo(FileOutputStream(file))
-    pdfDocument.close()
-    return file
-}
 
