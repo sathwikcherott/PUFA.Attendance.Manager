@@ -464,6 +464,25 @@ fun HomeScreen(
         }
 
         item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
+        item { Text("Visual Insights", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
+        
+        item {
+            val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
+            val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
+            AttendanceHeroCard(
+                attendanceRatio = attendanceRatio,
+                presentCount = presentCount,
+                absentCount = playersCount - presentCount,
+                lastUpdated = lastUpdated
+            )
+        }
+
+        item {
+            val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
+            HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
+        }
+
+        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
         
         item { Text("Alerts & Warnings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
 
@@ -550,25 +569,6 @@ fun HomeScreen(
                     Text("Import")
                 }
             }
-        }
-
-        item { HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant) }
-        item { Text("Visual Insights", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) }
-        
-        item {
-            val attendanceRatio = if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
-            val lastUpdated = attendanceToday.maxOfOrNull { it.lastUpdated }
-            AttendanceHeroCard(
-                attendanceRatio = attendanceRatio,
-                presentCount = presentCount,
-                absentCount = playersCount - presentCount,
-                lastUpdated = lastUpdated
-            )
-        }
-
-        item {
-            val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
-            HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
         }
     }
 }
