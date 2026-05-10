@@ -233,7 +233,7 @@ fun AttendanceSummaryCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -303,7 +303,7 @@ fun StatCard(title: String, value: String, modifier: Modifier = Modifier, accent
         modifier = modifier, 
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = title, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA)))
@@ -329,7 +329,7 @@ fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaid
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -384,7 +384,7 @@ fun AlertCard(
         modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(250)), 
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -419,7 +419,7 @@ fun OperationalButton(text: String, icon: androidx.compose.ui.graphics.vector.Im
         modifier = modifier.height(48.dp), 
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         Icon(icon, null, modifier = Modifier.size(18.dp))
