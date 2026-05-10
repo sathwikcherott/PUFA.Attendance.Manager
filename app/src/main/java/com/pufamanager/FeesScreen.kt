@@ -32,9 +32,9 @@ fun FeesScreen(
     currentMonth: String,
     onTogglePayment: (Player, Boolean, Double) -> Unit
 ) {
-    val backgroundDark = Color(0xFF14090D)
-    val primarySurface = Color(0xFF2A1118)
-    val elevatedSurface = Color(0xFF37161D)
+    val backgroundDark = Color(0xFF1A0D11)
+    val primarySurface = Color(0xFF241117)
+    val elevatedSurface = Color(0xFF2A141D)
     val accentPink = Color(0xFFFF99C1)
     val successGreen = Color(0xFF2CC55E)
     val dangerRed = Color(0xFFEF4444)

@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Premium Dark Academy Theme -->
+    <!-- Inheriting from Material3 ensures consistent window rendering for the cinematic UI -->
+    <!-- Note: If M3 is not resolving in your IDE version, this can be bridged via MaterialComponents -->
     <style name="Theme.PUFAAttendanceManager" parent="android:Theme.Material.NoActionBar">
         <!-- Set the splash background as the initial window background -->
         <item name="android:windowBackground">@drawable/splash_background</item>
-        <item name="android:statusBarColor">#14090D</item>
-        <item name="android:navigationBarColor">#14090D</item>
+        <item name="android:statusBarColor">#1A0D11</item>
+        <item name="android:navigationBarColor">#1A0D11</item>
+        <!-- Ensure platform rendering is consistent with dark operational dashboard -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -166,8 +166,8 @@ fun PlayersScreen(
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedContainerColor = Color(0xFF2A1118),
-                            unfocusedContainerColor = Color(0xFF2A1118),
+                            focusedContainerColor = Color(0xFF220D13),
+                            unfocusedContainerColor = Color(0xFF220D13),
                             focusedBorderColor = Color(0xFF3A2029),
                             unfocusedBorderColor = Color(0xFF3A2029)
                         ),
@@ -189,7 +189,7 @@ fun PlayersScreen(
                     
                     Surface(
                         onClick = { isSearchActive = true },
-                        color = Color(0xFF2A1118),
+                        color = Color(0xFF241117),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.size(40.dp)
                     ) {
@@ -256,7 +256,7 @@ fun PlayersScreen(
                     animationSpec = tween(250)
                 ),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
             ) {
                 Row(
@@ -266,7 +266,7 @@ fun PlayersScreen(
                     Surface(
                         modifier = Modifier.size(36.dp),
                         shape = androidx.compose.foundation.shape.CircleShape,
-                        color = Color(0xFF37161D)
+                        color = Color(0xFF2A141D)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
@@ -365,8 +365,8 @@ fun PlayersScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color(0xFF2A1118),
-                        unfocusedContainerColor = Color(0xFF2A1118),
+                        focusedContainerColor = Color(0xFF241117),
+                        unfocusedContainerColor = Color(0xFF241117),
                         focusedBorderColor = Color(0xFF3A2029),
                         unfocusedBorderColor = Color(0xFF3A2029)
                     )
@@ -399,7 +399,7 @@ fun PlayersScreen(
                     animationSpec = tween(250)
                 ),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
             ) {
                 Row(

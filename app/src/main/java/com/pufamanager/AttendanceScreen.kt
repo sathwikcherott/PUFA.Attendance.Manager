@@ -32,8 +32,8 @@ fun AttendanceScreen(
     onBatchSelected: (Batch) -> Unit,
     onSave: (List<Pair<Int, Boolean?>>) -> Unit
 ) {
-    val backgroundDark = Color(0xFF14090D)
-    val primarySurface = Color(0xFF2A1118)
+    val backgroundDark = Color(0xFF1A0D11)
+    val primarySurface = Color(0xFF241117)
     val accentPink = Color(0xFFFF99C1)
     val primaryText = Color(0xFFFFFFFF)
     val secondaryText = Color(0xFFA1A1AA)
@@ -187,8 +187,8 @@ fun AttendancePlayerCard(
     state: Boolean?,
     onStateChange: (Boolean?) -> Unit
 ) {
-    val primarySurface = Color(0xFF2A1118)
-    val elevatedSurface = Color(0xFF37161D)
+    val primarySurface = Color(0xFF241117)
+    val elevatedSurface = Color(0xFF2A141D)
     val accentPink = Color(0xFFFF99C1)
     val successGreen = Color(0xFF2CC55E)
     val dangerRed = Color(0xFFEF4444)
@@ -268,7 +268,7 @@ fun AttendanceButton(
     activeColor: Color,
     onClick: () -> Unit
 ) {
-    val elevatedSurface = Color(0xFF37161D)
+    val elevatedSurface = Color(0xFF2F1219)
     val secondaryText = Color(0xFFA1A1AA)
 
     val bgColor by animateColorAsState(

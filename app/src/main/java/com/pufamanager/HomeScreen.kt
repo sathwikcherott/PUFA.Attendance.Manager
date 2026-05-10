@@ -58,7 +58,7 @@ fun HomeScreen(
         players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
     }
 
-    val backgroundDark = Color(0xFF14090D)
+    val backgroundDark = Color(0xFF1A0D11)
 
     LazyColumn(
         modifier = Modifier
@@ -232,8 +232,8 @@ fun AttendanceSummaryCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -301,9 +301,9 @@ private fun MetricColumn(label: String, value: String, color: Color) {
 fun StatCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color) {
     Card(
         modifier = modifier, 
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = title, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA)))
@@ -328,8 +328,8 @@ fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaid
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -382,9 +382,9 @@ fun AlertCard(
     Card(
         onClick = onToggle,
         modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(250)), 
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -418,8 +418,8 @@ fun OperationalButton(text: String, icon: androidx.compose.ui.graphics.vector.Im
         onClick = onClick, 
         modifier = modifier.height(48.dp), 
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF241117), contentColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         Icon(icon, null, modifier = Modifier.size(18.dp))

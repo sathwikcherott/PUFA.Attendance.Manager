@@ -2,7 +2,7 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Academy Background Color -->
     <item>
-        <color android:color="#14090D" />
+        <color android:color="#1A0D11" />
     </item>
 
     <!-- Centered Logo -->

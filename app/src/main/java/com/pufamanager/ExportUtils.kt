@@ -266,7 +266,7 @@ object ExportUtils {
         var y = startY
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         paint.textSize = 22f
-        canvas.drawText("PUFA Manager Hub", MARGIN, y, paint)
+        canvas.drawText("Academy Manager", MARGIN, y, paint)
         y += 30f
         paint.textSize = 18f
         canvas.drawText(subtitle, MARGIN, y, paint)

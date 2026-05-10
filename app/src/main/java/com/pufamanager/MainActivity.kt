@@ -131,11 +131,12 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    containerColor = Color(0xFF1A0D11),
                     bottomBar = {
                         Column {
                             HorizontalDivider(color = Color(0xFF3A2029), thickness = 1.dp)
                             NavigationBar(
-                                containerColor = Color(0xFF14090D),
+                                containerColor = Color(0xFF1A0D11),
                                 tonalElevation = 0.dp
                             ) {
                                 AppScreen.entries.forEach { screen ->

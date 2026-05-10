@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,9 +43,9 @@ fun HistoryScreen(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
-    val backgroundDark = Color(0xFF14090D)
+    val backgroundDark = Color(0xFF1A0D11)
     val accentPink = Color(0xFFFF99C1)
-    val elevatedSurface = Color(0xFF37161D)
+    val elevatedSurface = Color(0xFF2A141D)
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
 
@@ -308,7 +307,7 @@ fun ExportCard(
     var isExporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val primarySurface = Color(0xFF2A1118)
+    val primarySurface = Color(0xFF241117)
     val accentPink = Color(0xFFFF99C1)
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
@@ -439,12 +438,10 @@ fun AttendanceHistorySection(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
-    val primarySurface = Color(0xFF2A1118)
-    val elevatedSurface = Color(0xFF37161D)
+    val primarySurface = Color(0xFF241117)
     val accentPink = Color(0xFFFF99C1)
     val secondaryText = Color(0xFFA1A1AA)
-    val dividerColor = Color(0xFF3A2029)
-    val backgroundDark = Color(0xFF14090D)
+    val backgroundDark = Color(0xFF1A0D11)
 
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
@@ -510,12 +507,11 @@ fun AttendanceHistorySection(
                 showAllOption = true
             )
 
-            OutlinedCard(
+            Card(
                 onClick = { showDatePicker = true },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = primarySurface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
+                colors = CardDefaults.cardColors(containerColor = primarySurface)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
@@ -676,14 +672,14 @@ fun PaymentHistorySection(
     localDeviceId: String,
     onSave: () -> Unit
 ) {
-    val primarySurface = Color(0xFF2A1118)
-    val elevatedSurface = Color(0xFF37161D)
+    val primarySurface = Color(0xFF241117)
+    val elevatedSurface = Color(0xFF2A141D)
     val accentPink = Color(0xFFFF99C1)
     val secondaryText = Color(0xFFA1A1AA)
-    val dividerColor = Color(0xFF3A2029)
-    val backgroundDark = Color(0xFF14090D)
+    val backgroundDark = Color(0xFF1A0D11)
     val successGreen = Color(0xFF2CC55E)
     val dangerRed = Color(0xFFEF4444)
+    val dividerColor = Color(0xFF3A2029)
 
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
