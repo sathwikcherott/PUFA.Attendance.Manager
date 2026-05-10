@@ -250,14 +250,14 @@ fun PlayersScreen(
             val bName = batches.find { it.id == player.batchId }?.name ?: "Unknown"
             val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
             
-            ElevatedCard(
+            Card(
                 onClick = { viewingPlayerDetails = player },
                 modifier = Modifier.fillMaxWidth().animateContentSize(
                     animationSpec = tween(250)
                 ),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), 

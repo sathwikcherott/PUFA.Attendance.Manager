@@ -195,11 +195,11 @@ fun AttendancePlayerCard(
     val primaryText = Color(0xFFFFFFFF)
     val secondaryText = Color(0xFFA1A1AA)
 
-    ElevatedCard(
+    Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = primarySurface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
         Row(
             modifier = Modifier

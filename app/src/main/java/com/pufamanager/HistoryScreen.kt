@@ -312,11 +312,11 @@ fun ExportCard(
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
 
-    ElevatedCard(
+    Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = primarySurface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -442,6 +442,7 @@ fun AttendanceHistorySection(
     val accentPink = Color(0xFFFF99C1)
     val secondaryText = Color(0xFFA1A1AA)
     val backgroundDark = Color(0xFF1A0D11)
+    val dividerColor = Color(0xFF3A2029)
 
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
@@ -567,13 +568,13 @@ fun AttendanceHistorySection(
                 val state = pendingAttendance[player.id]
                 val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
 
-                ElevatedCard(
+                Card(
                     modifier = Modifier.fillMaxWidth().animateContentSize(
                         animationSpec = tween(250)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = primarySurface),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -677,9 +678,9 @@ fun PaymentHistorySection(
     val accentPink = Color(0xFFFF99C1)
     val secondaryText = Color(0xFFA1A1AA)
     val backgroundDark = Color(0xFF1A0D11)
+    val dividerColor = Color(0xFF3A2029)
     val successGreen = Color(0xFF2CC55E)
     val dangerRed = Color(0xFFEF4444)
-    val dividerColor = Color(0xFF3A2029)
 
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     
@@ -821,13 +822,13 @@ fun PaymentHistorySection(
                     else -> dangerRed
                 }
 
-                ElevatedCard(
+                Card(
                     modifier = Modifier.fillMaxWidth().animateContentSize(
                         animationSpec = tween(250)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = primarySurface),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
