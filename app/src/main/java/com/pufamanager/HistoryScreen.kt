@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -177,92 +178,117 @@ fun ExportsSection(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 32.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp)
     ) {
-        item(key = "export_attendance") {
-            ExportCard(
-                title = "Attendance Summary",
-                helperText = "Monthly summary table (PDF)",
-                batches = batches,
-                months = months,
-                showMonth = true,
-                onExport = { batch, month ->
-                    if (batch == null || month == null) {
-                        Toast.makeText(context, "Please select batch and month", Toast.LENGTH_SHORT).show()
-                        return@ExportCard
-                    }
-                    try {
-                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            ExportUtils.generateAttendanceSummaryPdf(context, batch, month, players, allAttendance)
+        // Attendance Exports Group
+        item(key = "group_attendance") {
+            ExportGroup(title = "Attendance Documentation") {
+                ExportCard(
+                    title = "Monthly Summary",
+                    helperText = "Comprehensive attendance table (PDF)",
+                    batches = batches,
+                    months = months,
+                    showMonth = true,
+                    onExport = { batch, month ->
+                        if (batch == null || month == null) {
+                            Toast.makeText(context, "Select batch and month", Toast.LENGTH_SHORT).show()
+                            return@ExportCard
                         }
-                        if (pdfFile != null) {
-                            shareFile(pdfFile)
-                            Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "No attendance records found", Toast.LENGTH_SHORT).show()
+                        try {
+                            val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                ExportUtils.generateAttendanceSummaryPdf(context, batch, month, players, allAttendance)
+                            }
+                            if (pdfFile != null) {
+                                shareFile(pdfFile)
+                                Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "No records found", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                     }
-                }
-            )
+                )
+            }
         }
 
-        item(key = "export_payments") {
-            ExportCard(
-                title = "Payment Reports",
-                helperText = "Monthly financial statements (PDF)",
-                batches = batches,
-                months = months,
-                showMonth = true,
-                onExport = { batch, month ->
-                    if (batch == null || month == null) {
-                        Toast.makeText(context, "Please select batch and month", Toast.LENGTH_SHORT).show()
-                        return@ExportCard
-                    }
-                    try {
-                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            ExportUtils.generatePaymentReportPdf(context, batch, month, players, allPayments)
+        // Payment Exports Group
+        item(key = "group_payments") {
+            ExportGroup(title = "Financial Records") {
+                ExportCard(
+                    title = "Fee Collection Report",
+                    helperText = "Monthly payment status & summaries (PDF)",
+                    batches = batches,
+                    months = months,
+                    showMonth = true,
+                    onExport = { batch, month ->
+                        if (batch == null || month == null) {
+                            Toast.makeText(context, "Select batch and month", Toast.LENGTH_SHORT).show()
+                            return@ExportCard
                         }
-                        if (pdfFile != null) {
-                            shareFile(pdfFile)
-                            Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, "No payment records found", Toast.LENGTH_SHORT).show()
+                        try {
+                            val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                ExportUtils.generatePaymentReportPdf(context, batch, month, players, allPayments)
+                            }
+                            if (pdfFile != null) {
+                                shareFile(pdfFile)
+                                Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "No records found", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                         }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                     }
-                }
-            )
+                )
+            }
         }
 
-        item(key = "export_roster") {
-            ExportCard(
-                title = "Player Roster",
-                helperText = "Active player list export (PDF)",
-                batches = batches,
-                months = emptyList(),
-                showMonth = false,
-                onExport = { batch, _ ->
-                    if (batch == null) {
-                        Toast.makeText(context, "Please select a batch", Toast.LENGTH_SHORT).show()
-                        return@ExportCard
-                    }
-                    try {
-                        val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                            val batchPlayers = players.filter { it.batchId == batch.id }
-                            ExportUtils.generatePlayerListPdf(context, batch, batchPlayers)
+        // Administrative Exports Group
+        item(key = "group_admin") {
+            ExportGroup(title = "Administrative Documentation") {
+                ExportCard(
+                    title = "Player List",
+                    helperText = "Active academy roster by batch (PDF)",
+                    batches = batches,
+                    months = emptyList(),
+                    showMonth = false,
+                    onExport = { batch, _ ->
+                        if (batch == null) {
+                            Toast.makeText(context, "Select a batch", Toast.LENGTH_SHORT).show()
+                            return@ExportCard
                         }
-                        shareFile(pdfFile)
-                        Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                        try {
+                            val pdfFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                val batchPlayers = players.filter { it.batchId == batch.id }
+                                ExportUtils.generatePlayerListPdf(context, batch, batchPlayers)
+                            }
+                            shareFile(pdfFile)
+                            Toast.makeText(context, "Export Successful!", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
-            )
+                )
+            }
         }
+    }
+}
+
+@Composable
+fun ExportGroup(title: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp
+            ),
+            color = Color(0xFFA1A1AA).copy(alpha = 0.6f),
+            modifier = Modifier.padding(start = 4.dp)
+        )
+        content()
     }
 }
 
@@ -378,23 +404,25 @@ fun ExportCard(
                         isExporting = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(10.dp),
                 enabled = !isExporting,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White.copy(alpha = 0.05f),
+                    containerColor = Color.White.copy(alpha = 0.04f),
                     contentColor = Color.White
                 ),
-                border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
+                border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor.copy(alpha = 0.5f))
             ) {
                 if (isExporting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color = Color.White
+                        color = accentPink
                     )
                 } else {
-                    Text("Generate Report", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp), tint = accentPink)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Generate Official PDF", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

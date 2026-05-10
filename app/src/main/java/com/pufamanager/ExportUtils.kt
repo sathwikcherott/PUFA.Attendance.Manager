@@ -30,7 +30,7 @@ object ExportUtils {
         var y = MARGIN
 
         // Header
-        y = drawHeader(canvas, paint, "Player Roster", y)
+        y = drawHeader(canvas, paint, "Player List", y)
         
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         paint.textSize = 14f

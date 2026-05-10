@@ -217,7 +217,7 @@ fun PlayersScreen(
 
         item(key = "roster_label") { 
             Text(
-                "Player Roster", 
+                "Player List",
                 style = MaterialTheme.typography.labelLarge, 
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFFA1A1AA)
