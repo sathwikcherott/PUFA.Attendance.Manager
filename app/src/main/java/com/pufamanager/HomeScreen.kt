@@ -39,16 +39,11 @@ fun HomeScreen(
     val presentCount = remember(attendanceToday) { attendanceToday.count { it.isPresent } }
     val paidCount = remember(paymentsThisMonth) { paymentsThisMonth.size }
 
-    val backgroundDark = Color(0xFF14090D)
-
     val attendanceRatio = remember(playersCount, presentCount) {
         if (playersCount > 0) presentCount.toFloat() / playersCount else 0f
     }
     val lastUpdated = remember(attendanceToday) {
         attendanceToday.maxOfOrNull { it.lastUpdated }
-    }
-    val paymentRatio = remember(playersCount, paidCount) {
-        if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
     }
 
     val lowAttendance = remember(players, allAttendance) {
@@ -63,129 +58,78 @@ fun HomeScreen(
         players.filter { p -> !p.isExempted && paymentsThisMonth.none { it.playerId == p.id } }
     }
 
+    val backgroundDark = Color(0xFF14090D)
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundDark)
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp)
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)
     ) {
-        // 1. Hero Attendance Card
-        item(key = "attendance_hero") {
-            AttendanceHeroCard(
-                attendanceRatio = attendanceRatio,
-                presentCount = presentCount,
-                absentCount = playersCount - presentCount,
-                lastUpdated = lastUpdated
+        // 1. Premium Dashboard Header
+        item(key = "home_header") {
+            HomeHeader()
+        }
+
+        // 2. Main Operational Card (Attendance Summary)
+        item(key = "attendance_summary") {
+            val lastUpdatedTime = lastUpdated?.let { 
+                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(it))
+            }
+            AttendanceSummaryCard(
+                ratio = attendanceRatio,
+                present = presentCount,
+                total = playersCount,
+                lastUpdated = lastUpdatedTime
             )
         }
 
-        // 2. Visual Insights
-        item(key = "visual_insights") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Visual Insights", 
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = Color.White
+        // 3. Activity & Financial Insights
+        item(key = "camp_insights") {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                DashboardSectionLabel("Insights")
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatCard("Total Players", playersCount.toString(), Modifier.weight(1f), Color(0xFFFF99C1))
+                    StatCard("Total Batches", batches.size.toString(), Modifier.weight(1f), Color(0xFFFFC7DF))
+                }
+                
+                val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
+                FinancialStatusCard(
+                    title = "Payments ($currentMonth)", 
+                    ratio = paymentRatio, 
+                    description = "${(paymentRatio * 100).toInt()}% Collections Completed",
+                    unpaidCount = unpaidPlayers.size,
+                    paidCount = paidCount
                 )
-                HomeChartCard("Monthly Payments", paymentRatio, "${(paymentRatio * 100).toInt()}% Paid", MaterialTheme.colorScheme.tertiary)
             }
         }
 
-        // 3. Camp Overview
-        item(key = "camp_overview") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Camp Overview", 
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = Color.White
-                )
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HomeCard("Total Players", playersCount.toString(), Modifier.weight(1f), Color(0xFFFF99C1))
-                    HomeCard("Total Batches", "${batches.size}", Modifier.weight(1f), Color(0xFFFFC7DF))
-                }
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HomeCard("Present Today", "$presentCount", Modifier.weight(1f), Color(0xFF2CC55E))
-                    HomeCard("Absent Today", "${playersCount - presentCount}", Modifier.weight(1f), Color(0xFFEF4444))
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val nonExemptedPlayersCount = players.count { !it.isExempted }
-                    HomeCard("Paid ($currentMonth)", "$paidCount", Modifier.weight(1f), Color(0xFF2CC55E))
-                    HomeCard("Not Paid", "${nonExemptedPlayersCount - paidCount}", Modifier.weight(1f), Color(0xFFA1A1AA))
-                }
-            }
-        }
-
-        // 4. Alerts & Warnings
+        // 4. Alerts & Reminders
         if (lowAttendance.isNotEmpty() || unpaidPlayers.isNotEmpty()) {
-            item(key = "alerts_warnings") {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Alerts & Warnings", 
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = Color.White
-                    )
+            item(key = "alerts_section") {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DashboardSectionLabel("Operational Alerts")
 
                     if (lowAttendance.isNotEmpty()) {
-                        Card(
-                            onClick = { isAttendanceExpanded = !isAttendanceExpanded },
-                            modifier = Modifier.fillMaxWidth().animateContentSize(
-                                animationSpec = tween(250)
-                            ), 
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        AlertCard(
+                            title = "${lowAttendance.size} Attendance Warnings",
+                            icon = Icons.Default.Warning,
+                            iconColor = Color(0xFFF59E0B),
+                            isExpanded = isAttendanceExpanded,
+                            onToggle = { isAttendanceExpanded = !isAttendanceExpanded }
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                                        Spacer(Modifier.width(10.dp))
-                                        Text(
-                                            "${lowAttendance.size} Attendance Warnings", 
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium
-                                            ), 
-                                            color = Color.White
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = if (isAttendanceExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                        contentDescription = null,
-                                        tint = Color(0xFFA1A1AA),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                
-                                if (isAttendanceExpanded) {
-                                    Spacer(Modifier.height(12.dp))
-                                    lowAttendance.forEach { (name, percent) ->
-                                        val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), 
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
-                                            Text("$percent%", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = color)
-                                        }
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                lowAttendance.forEach { (name, percent) ->
+                                    val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(), 
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
+                                        Text("$percent%", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = color)
                                     }
                                 }
                             }
@@ -193,52 +137,19 @@ fun HomeScreen(
                     }
 
                     if (unpaidPlayers.isNotEmpty()) {
-                        Card(
-                            onClick = { isDefaultersExpanded = !isDefaultersExpanded },
-                            modifier = Modifier.fillMaxWidth().animateContentSize(
-                                animationSpec = tween(250)
-                            ),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
-                            shape = RoundedCornerShape(12.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+                        AlertCard(
+                            title = "${unpaidPlayers.size} Pending Payments",
+                            icon = Icons.Default.Info,
+                            iconColor = Color(0xFFFF99C1),
+                            isExpanded = isDefaultersExpanded,
+                            onToggle = { isDefaultersExpanded = !isDefaultersExpanded }
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                unpaidPlayers.sortedBy { it.name }.forEach { player ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFFFF99C1), modifier = Modifier.size(16.dp))
+                                        Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
                                         Spacer(Modifier.width(10.dp))
-                                        Text(
-                                            "${unpaidPlayers.size} Fee Defaulters", 
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium
-                                            ), 
-                                            color = Color.White
-                                        )
-                                    }
-                                    Icon(
-                                        imageVector = if (isDefaultersExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                        contentDescription = null,
-                                        tint = Color(0xFFA1A1AA),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-
-                                if (isDefaultersExpanded) {
-                                    Spacer(Modifier.height(12.dp))
-                                    unpaidPlayers.sortedBy { it.name }.forEach { player ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically, 
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                        ) {
-                                            Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
-                                            Spacer(Modifier.width(10.dp))
-                                            Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
-                                        }
+                                        Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
                                     }
                                 }
                             }
@@ -248,42 +159,23 @@ fun HomeScreen(
             }
         }
 
-        // 5. Data Sync / Actions
-        item(key = "utility_actions") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Utility Actions", 
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = Color.White
-                )
+        // 5. Utility Actions
+        item(key = "system_actions") {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                DashboardSectionLabel("System")
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(
-                        onClick = onShare, 
-                        modifier = Modifier.weight(1f).height(44.dp), 
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Share Data", fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    }
-                    Button(
-                        onClick = onImport, 
-                        modifier = Modifier.weight(1f).height(44.dp), 
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
-                        contentPadding = PaddingValues(horizontal = 12.dp)
-                    ) {
-                        Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Import", fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    }
+                    OperationalButton(
+                        text = "Share Data",
+                        icon = Icons.Default.Share,
+                        onClick = onShare,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OperationalButton(
+                        text = "Sync / Import",
+                        icon = Icons.Default.KeyboardArrowDown,
+                        onClick = onImport,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -291,210 +183,247 @@ fun HomeScreen(
 }
 
 @Composable
-fun AttendanceHeroCard(
-    attendanceRatio: Float,
-    presentCount: Int,
-    absentCount: Int,
-    lastUpdated: Long?,
-    sessionLabel: String = "All Batches Combined"
-) {
-    val cardBg = Color(0xFF2A1118)
-    val accentPink = Color(0xFFFF99C1)
-    val successGreen = Color(0xFF2CC55E)
-    val dangerRed = Color(0xFFEF4444)
-    val primaryText = Color(0xFFFFFFFF)
-    val secondaryText = Color(0xFFA1A1AA)
-    val dividerColor = Color(0xFF3A2029)
+fun HomeHeader() {
+    val dateStr = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        Text(
+            text = "Academy Dashboard",
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-0.5).sp
+            ),
+            color = Color.White
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = dateStr,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color(0xFFA1A1AA)
+        )
+    }
+}
 
-    val animatedRatio by animateFloatAsState(
-        targetValue = attendanceRatio, 
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "ratio"
+@Composable
+fun DashboardSectionLabel(title: String) {
+    Text(
+        text = title.uppercase(), 
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp
+        ),
+        color = Color(0xFFA1A1AA).copy(alpha = 0.6f)
     )
-
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Column {
-                    Text(
-                        text = "Today's Session",
-                        style = TextStyle(
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = primaryText
-                        )
-                    )
-                    Text(
-                        text = sessionLabel,
-                        style = TextStyle(
-                            fontSize = 11.sp,
-                            color = accentPink.copy(alpha = 0.7f)
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "${(attendanceRatio * 100).toInt()}% Attendance",
-                style = TextStyle(
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = primaryText
-                )
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = { animatedRatio },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
-                color = accentPink,
-                trackColor = dividerColor,
-                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "$presentCount Present",
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = successGreen
-                        )
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(24.dp)
-                        .background(dividerColor)
-                )
-
-                Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
-                    Text(
-                        text = "$absentCount Absent",
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = dangerRed
-                        )
-                    )
-                }
-            }
-
-            if (lastUpdated != null && lastUpdated > 0) {
-                Spacer(modifier = Modifier.height(20.dp))
-                val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastUpdated))
-                Text(
-                    text = "Last sync at $timeStr",
-                    style = TextStyle(
-                        fontSize = 11.sp,
-                        color = secondaryText.copy(alpha = 0.5f)
-                    )
-                )
-            }
-        }
-    }
 }
 
 @Composable
-fun HomeCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color = Color(0xFFFF99C1)) {
-    val cardBg = Color(0xFF2A1118)
-    val primaryText = Color(0xFFFFFFFF)
-    val secondaryText = Color(0xFFA1A1AA)
-
-    Card(
-        modifier = modifier, 
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp), 
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = title, 
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.4.sp
-                ), 
-                color = secondaryText
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .background(accentColor, androidx.compose.foundation.shape.CircleShape)
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = value, 
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold
-                    ), 
-                    color = primaryText
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun HomeChartCard(title: String, ratio: Float, label: String, color: Color) {
+fun AttendanceSummaryCard(
+    ratio: Float,
+    present: Int,
+    total: Int,
+    lastUpdated: String?
+) {
     val animatedRatio by animateFloatAsState(
         targetValue = ratio, 
         animationSpec = tween(800, easing = FastOutSlowInEasing),
         label = "ratio"
     )
-    val cardBg = Color(0xFF2A1118)
-    val secondaryText = Color(0xFFA1A1AA)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = cardBg),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                title, 
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                ), 
-                color = secondaryText
-            )
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Daily Performance",
+                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.8f))
+                )
+                if (lastUpdated != null) {
+                    Text(
+                        text = "Sync: $lastUpdated",
+                        style = TextStyle(fontSize = 11.sp, color = Color(0xFFA1A1AA))
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "${(ratio * 100).toInt()}%",
+                    style = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Attendance Rate",
+                    style = TextStyle(fontSize = 14.sp, color = Color(0xFFA1A1AA)),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             LinearProgressIndicator(
                 progress = { animatedRatio },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = color,
+                color = Color(0xFFFF99C1),
                 trackColor = Color(0xFF3A2029),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
-            Text(label, style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold), color = Color.White)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                MetricColumn("Present", "$present", Color(0xFF2CC55E))
+                MetricColumn("Absent", "${total - present}", Color(0xFFEF4444))
+                MetricColumn("Players", "$total", Color.White)
+            }
         }
+    }
+}
+
+@Composable
+private fun MetricColumn(label: String, value: String, color: Color) {
+    Column {
+        Text(text = label, style = TextStyle(fontSize = 11.sp, color = Color(0xFFA1A1AA)))
+        Text(text = value, style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color))
+    }
+}
+
+@Composable
+fun StatCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color) {
+    Card(
+        modifier = modifier, 
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA)))
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(6.dp).background(accentColor, androidx.compose.foundation.shape.CircleShape))
+                Spacer(Modifier.width(10.dp))
+                Text(text = value, style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.White))
+            }
+        }
+    }
+}
+
+@Composable
+fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaidCount: Int, paidCount: Int) {
+    val animatedRatio by animateFloatAsState(
+        targetValue = ratio, 
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "ratio"
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title, 
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA))
+                )
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "$unpaidCount Unpaid",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFEF4444))
+                    )
+                    Text(
+                        text = "$paidCount Paid",
+                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2CC55E))
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            LinearProgressIndicator(
+                progress = { animatedRatio },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+                color = Color(0xFF2CC55E),
+                trackColor = Color(0xFF3A2029),
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = description, 
+                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            )
+        }
+    }
+}
+
+@Composable
+fun AlertCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Card(
+        onClick = onToggle,
+        modifier = Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(250)), 
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1118)),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Text(text = title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.White))
+                }
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = Color(0xFFA1A1AA),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            if (isExpanded) {
+                Spacer(Modifier.height(16.dp))
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun OperationalButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick, 
+        modifier = modifier.height(48.dp), 
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A1118), contentColor = Color.White),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
+        contentPadding = PaddingValues(horizontal = 16.dp)
+    ) {
+        Icon(icon, null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
