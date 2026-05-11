@@ -566,7 +566,12 @@ fun AttendanceHistorySection(
 
             items(filteredPlayers, key = { it.id }) { player ->
                 val state = pendingAttendance[player.id]
-                val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
+                val yearOfBirth = try {
+                    player.dateOfBirth.split("/").last().toInt()
+                } catch (e: Exception) {
+                    0
+                }
+                val yearShort = (yearOfBirth % 100).toString().padStart(2, '0')
 
                 Card(
                     modifier = Modifier.fillMaxWidth().animateContentSize(
@@ -814,7 +819,12 @@ fun PaymentHistorySection(
 
             items(filteredPlayers, key = { "pay_${it.id}" }) { player ->
                 val isPaid = pendingPayments.containsKey(player.id)
-                val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
+                val yearOfBirth = try {
+                    player.dateOfBirth.split("/").last().toInt()
+                } catch (e: Exception) {
+                    0
+                }
+                val yearShort = (yearOfBirth % 100).toString().padStart(2, '0')
 
                 val statusColor = when {
                     isPaid -> successGreen

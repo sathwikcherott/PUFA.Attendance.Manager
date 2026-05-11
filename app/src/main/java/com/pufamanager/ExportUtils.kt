@@ -55,7 +55,7 @@ object ExportUtils {
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         paint.textSize = 12f
         canvas.drawText("Player Name", MARGIN + 10f, y + 18f, paint)
-        canvas.drawText("YOB", MARGIN + nameColWidth + 10f, y + 18f, paint)
+        canvas.drawText("DOB", MARGIN + nameColWidth + 10f, y + 18f, paint)
         y += rowHeight
 
         // Table Rows
@@ -74,7 +74,7 @@ object ExportUtils {
             
             paint.style = Paint.Style.FILL
             canvas.drawText(player.name, MARGIN + 10f, y + 18f, paint)
-            canvas.drawText(player.yearOfBirth.toString(), MARGIN + nameColWidth + 10f, y + 18f, paint)
+            canvas.drawText(player.dateOfBirth, MARGIN + nameColWidth + 10f, y + 18f, paint)
             y += rowHeight
         }
 

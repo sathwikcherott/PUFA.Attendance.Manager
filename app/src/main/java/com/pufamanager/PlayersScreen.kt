@@ -29,7 +29,7 @@ import com.pufamanager.data.entity.Player
 fun PlayersScreen(
     players: List<Player>,
     batches: List<Batch>,
-    onAddPlayer: (String, Int, Int, Boolean, String?) -> Unit,
+    onAddPlayer: (String, Int, String, Boolean, String?) -> Unit,
     onUpdatePlayer: (Player) -> Unit,
     onDeletePlayer: (Player) -> Unit,
     onAddBatch: (String) -> Unit,
@@ -248,7 +248,12 @@ fun PlayersScreen(
 
         items(filteredPlayers, key = { "p_${it.id}" }) { player ->
             val bName = batches.find { it.id == player.batchId }?.name ?: "Unknown"
-            val yearShort = (player.yearOfBirth % 100).toString().padStart(2, '0')
+            val yearOfBirth = try {
+                player.dateOfBirth.split("/").last().toInt()
+            } catch (e: Exception) {
+                0
+            }
+            val yearShort = (yearOfBirth % 100).toString().padStart(2, '0')
             
             Card(
                 onClick = { viewingPlayerDetails = player },
@@ -450,9 +455,9 @@ fun PlayersScreen(
             player = editingPlayer,
             batches = batches,
             onDismiss = { showPlayerDialog = false; editingPlayer = null },
-            onConfirm = { name: String, bId: Int, yob: Int, isEx: Boolean, exRe: String? ->
-                if (editingPlayer == null) onAddPlayer(name, bId, yob, isEx, exRe)
-                else onUpdatePlayer(editingPlayer!!.copy(name = name, batchId = bId, yearOfBirth = yob, isExempted = isEx, exemptionReason = exRe))
+            onConfirm = { name: String, bId: Int, dob: String, isEx: Boolean, exRe: String? ->
+                if (editingPlayer == null) onAddPlayer(name, bId, dob, isEx, exRe)
+                else onUpdatePlayer(editingPlayer!!.copy(name = name, batchId = bId, dateOfBirth = dob, isExempted = isEx, exemptionReason = exRe))
                 showPlayerDialog = false
                 editingPlayer = null
             }
@@ -552,15 +557,27 @@ fun PlayerDialog(
     player: Player?,
     batches: List<Batch>,
     onDismiss: () -> Unit,
-    onConfirm: (String, Int, Int, Boolean, String?) -> Unit
+    onConfirm: (String, Int, String, Boolean, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(player?.name ?: "") }
-    var yearOfBirth by remember { mutableStateOf(player?.yearOfBirth?.toString() ?: "") }
+    var dateOfBirth by remember { mutableStateOf(player?.dateOfBirth ?: "") }
     var selectedBatch by remember { mutableStateOf(batches.find { it.id == player?.batchId } ?: batches.firstOrNull()) }
     var isExempted by remember { mutableStateOf(player?.isExempted ?: false) }
     var exemptionReason by remember { mutableStateOf(player?.exemptionReason ?: "") }
     var expanded by remember { mutableStateOf(false) }
     var exemptionExpanded by remember { mutableStateOf(false) }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = try {
+            if (dateOfBirth.isNotEmpty()) {
+                val sdf = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+                sdf.parse(dateOfBirth)?.time
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    )
 
     val exemptionReasons = listOf("Student", "Other")
 
@@ -577,24 +594,45 @@ fun PlayerDialog(
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 OutlinedTextField(
-                    value = yearOfBirth, 
-                    onValueChange = { 
-                        if (it.length <= 4 && it.all { char -> char.isDigit() }) {
-                            yearOfBirth = it
+                    value = dateOfBirth,
+                    onValueChange = { },
+                    readOnly = true,
+                    label = { Text("Date of Birth") },
+                    placeholder = { Text("DD/MM/YYYY") },
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp))
                         }
-                    }, 
-                    label = { Text("Year of Birth") }, 
-                    placeholder = { Text("e.g. 2007") },
-                    supportingText = { Text("Enter full year (1995-2022)") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium,
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
-                    leadingIcon = { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(18.dp)) }
+                    shape = MaterialTheme.shapes.medium,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
                 )
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                datePickerState.selectedDateMillis?.let {
+                                    val sdf = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+                                    dateOfBirth = sdf.format(java.util.Date(it))
+                                }
+                                showDatePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
                 
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
@@ -680,9 +718,8 @@ fun PlayerDialog(
         confirmButton = {
             Button(
                 onClick = { 
-                    val yobInt = yearOfBirth.toIntOrNull() ?: 0
-                    if (name.isNotBlank() && selectedBatch != null && yobInt in 1995..2022) {
-                        onConfirm(name, selectedBatch!!.id, yobInt, isExempted, if (isExempted) exemptionReason else null)
+                    if (name.isNotBlank() && selectedBatch != null && dateOfBirth.isNotBlank()) {
+                        onConfirm(name, selectedBatch!!.id, dateOfBirth, isExempted, if (isExempted) exemptionReason else null)
                     }
                 }, 
                 shape = MaterialTheme.shapes.medium

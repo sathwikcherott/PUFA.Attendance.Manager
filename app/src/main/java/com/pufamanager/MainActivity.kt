@@ -280,11 +280,11 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.Players -> PlayersScreen(
                                     players = players,
                                     batches = batches,
-                                    onAddPlayer = { name, bId, yob, isEx, exRe ->
+                                    onAddPlayer = { name, bId, dob, isEx, exRe ->
                                         scope.launch { 
                                             try {
                                                 val newId = System.currentTimeMillis().toInt()
-                                                playerDao.insertPlayer(Player(id = newId, name = name, batchId = bId, yearOfBirth = yob, isExempted = isEx, exemptionReason = exRe, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
+                                                playerDao.insertPlayer(Player(id = newId, name = name, batchId = bId, dateOfBirth = dob, isExempted = isEx, exemptionReason = exRe, lastUpdated = System.currentTimeMillis(), deviceId = localDeviceId))
                                                 saveData()
                                                 Toast.makeText(context, "Player Added!", Toast.LENGTH_SHORT).show()
                                             } catch (e: Exception) {

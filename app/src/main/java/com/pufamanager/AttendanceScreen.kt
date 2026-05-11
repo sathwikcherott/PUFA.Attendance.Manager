@@ -233,8 +233,13 @@ fun AttendancePlayerCard(
                     color = primaryText,
                     maxLines = 1
                 )
+                val yearOfBirth = try {
+                    player.dateOfBirth.split("/").last()
+                } catch (e: Exception) {
+                    ""
+                }
                 Text(
-                    text = "Born ${player.yearOfBirth}",
+                    text = "Born $yearOfBirth",
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = 12.sp
                     ),
