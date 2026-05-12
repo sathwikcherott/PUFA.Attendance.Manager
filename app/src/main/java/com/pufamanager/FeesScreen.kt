@@ -16,9 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.pufamanager.data.entity.Batch
 import com.pufamanager.data.entity.Payment
 import com.pufamanager.data.entity.Player
@@ -41,6 +41,9 @@ fun FeesScreen(
     val primaryText = Color(0xFFFFFFFF)
     val secondaryText = Color(0xFFA1A1AA)
     val dividerColor = Color(0xFF3A2029)
+
+    val spacing = DesignSystem.spacing()
+    val typography = DesignSystem.typography()
 
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     var filterStatus by remember { mutableStateOf("All") } // All, Paid, Unpaid
@@ -80,27 +83,27 @@ fun FeesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundDark)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = spacing.horizontalMargin)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
         
         Text(
             "Monthly Fees",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 20.sp,
+            style = TextStyle(
+                fontSize = typography.titleLarge,
                 fontWeight = FontWeight.Bold
             ),
             color = primaryText
         )
         Text(
             currentMonth,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 13.sp
+            style = TextStyle(
+                fontSize = typography.bodySmall
             ),
             color = secondaryText
         )
         
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
 
         // Filter Toggle
         SingleChoiceSegmentedButtonRow(
@@ -124,42 +127,53 @@ fun FeesScreen(
                 ) {
                     Text(
                         label, 
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize = 13.sp,
+                        style = TextStyle(
+                            fontSize = typography.labelLarge,
                             fontWeight = if (filterStatus == label) FontWeight.SemiBold else FontWeight.Medium
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(spacing.small + 4.dp))
 
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             BatchSelector(
                 selectedBatch = selectedBatch,
                 batches = batches,
                 onBatchSelected = { selectedBatch = it },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1.5f),
                 label = "Filter"
             )
 
             ExposedDropdownMenuBox(
                 expanded = feeDropdownExpanded,
                 onExpandedChange = { feeDropdownExpanded = !feeDropdownExpanded },
-                modifier = Modifier.width(110.dp)
+                modifier = Modifier.weight(1f)
             ) {
                 OutlinedTextField(
                     value = if (selectedFeeOption == "Custom") "Custom" else "₹$selectedFeeOption",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Fee", color = secondaryText) },
+                    label = { 
+                        Text(
+                            "Fee", 
+                            color = secondaryText,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
+                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = feeDropdownExpanded) },
-                    modifier = Modifier.menuAnchor(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = primaryText,
                         unfocusedTextColor = primaryText,
@@ -167,7 +181,8 @@ fun FeesScreen(
                         unfocusedContainerColor = primarySurface,
                         focusedBorderColor = dividerColor,
                         unfocusedBorderColor = dividerColor
-                    )
+                    ),
+                    textStyle = TextStyle(fontSize = typography.bodyMedium)
                 )
                 ExposedDropdownMenu(
                     expanded = feeDropdownExpanded,
@@ -176,7 +191,14 @@ fun FeesScreen(
                 ) {
                     feeOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(if (option == "Custom") option else "₹$option", color = primaryText) },
+                            text = { 
+                                Text(
+                                    if (option == "Custom") option else "₹$option", 
+                                    color = primaryText,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                ) 
+                            },
                             onClick = {
                                 selectedFeeOption = option
                                 feeDropdownExpanded = false
@@ -190,11 +212,18 @@ fun FeesScreen(
                 OutlinedTextField(
                     value = customAmount,
                     onValueChange = { if (it.all { char -> char.isDigit() }) customAmount = it },
-                    label = { Text("Amount", color = secondaryText) },
-                    modifier = Modifier.width(90.dp),
+                    label = { 
+                        Text(
+                            "Amt", 
+                            color = secondaryText,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
+                    },
+                    modifier = Modifier.weight(0.8f),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
-                    prefix = { Text("₹", color = secondaryText) },
+                    prefix = { Text("₹", color = secondaryText, fontSize = typography.labelSmall) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = primaryText,
                         unfocusedTextColor = primaryText,
@@ -203,6 +232,7 @@ fun FeesScreen(
                         focusedBorderColor = dividerColor,
                         unfocusedBorderColor = dividerColor
                     ),
+                    textStyle = TextStyle(fontSize = typography.bodyMedium),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                     )
@@ -210,17 +240,17 @@ fun FeesScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp),
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(bottom = spacing.large)
         ) {
             if (displayPlayers.isEmpty()) {
                 item(key = "no_records") {
                     Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No records found", style = MaterialTheme.typography.bodyLarge, color = secondaryText)
+                        Text("No records found", style = TextStyle(fontSize = typography.bodyLarge), color = secondaryText)
                     }
                 }
             }
@@ -243,22 +273,24 @@ fun FeesScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = spacing.medium, vertical = spacing.small + 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = player.name,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = 16.sp,
+                                style = TextStyle(
+                                    fontSize = typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = primaryText
+                                color = primaryText,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(spacing.extraSmall))
                             
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
                                 if (player.isExempted) {
                                     Surface(
                                         color = statusColor.copy(alpha = 0.1f),
@@ -266,19 +298,19 @@ fun FeesScreen(
                                     ) {
                                         Text(
                                             text = "EXEMPT" + (player.exemptionReason?.let { " ($it)" } ?: ""),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize = 11.sp,
+                                            style = TextStyle(
+                                                fontSize = typography.labelSmall,
                                                 fontWeight = FontWeight.Bold
                                             ),
                                             color = statusColor,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(horizontal = spacing.extraSmall + 2.dp, vertical = 2.dp)
                                         )
                                     }
                                 } else {
                                     Text(
                                         text = if (isPaid) "Payment Confirmed" else "Pending Payment",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = 12.sp,
+                                        style = TextStyle(
+                                            fontSize = typography.bodySmall,
                                             fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
                                         ),
                                         color = if (isPaid) statusColor else statusColor.copy(alpha = 0.8f)
@@ -288,13 +320,13 @@ fun FeesScreen(
                                 if (isPaid && payment != null) {
                                     Text(
                                         text = "•",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                        style = TextStyle(fontSize = typography.bodySmall),
                                         color = secondaryText
                                     )
                                     Text(
                                         text = "₹${payment.amount.toInt()}",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = 13.sp,
+                                        style = TextStyle(
+                                            fontSize = typography.bodyMedium,
                                             fontWeight = FontWeight.Bold
                                         ),
                                         color = primaryText

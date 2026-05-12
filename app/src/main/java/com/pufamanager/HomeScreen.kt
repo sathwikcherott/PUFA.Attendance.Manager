@@ -59,18 +59,20 @@ fun HomeScreen(
     }
 
     val backgroundDark = Color(0xFF1A0D11)
+    val spacing = DesignSystem.spacing()
+    val typography = DesignSystem.typography()
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundDark)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)
+            .padding(horizontal = spacing.horizontalMargin),
+        verticalArrangement = Arrangement.spacedBy(spacing.large),
+        contentPadding = PaddingValues(top = spacing.small, bottom = spacing.extraLarge * 1.5f)
     ) {
         // 1. Premium Dashboard Header
         item(key = "home_header") {
-            HomeHeader()
+            HomeHeader(spacing, typography)
         }
 
         // 2. Main Operational Card (Attendance Summary)
@@ -82,18 +84,20 @@ fun HomeScreen(
                 ratio = attendanceRatio,
                 present = presentCount,
                 total = playersCount,
-                lastUpdated = lastUpdatedTime
+                lastUpdated = lastUpdatedTime,
+                spacing = spacing,
+                typography = typography
             )
         }
 
         // 3. Activity & Financial Insights
         item(key = "camp_insights") {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardSectionLabel("Insights")
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
+                DashboardSectionLabel("Insights", typography)
                 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Total Players", playersCount.toString(), Modifier.weight(1f), Color(0xFFFF99C1))
-                    StatCard("Total Batches", batches.size.toString(), Modifier.weight(1f), Color(0xFFFFC7DF))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
+                    StatCard("Total Players", playersCount.toString(), Modifier.weight(1f), Color(0xFFFF99C1), spacing, typography)
+                    StatCard("Total Batches", batches.size.toString(), Modifier.weight(1f), Color(0xFFFFC7DF), spacing, typography)
                 }
                 
                 val paymentRatio = if (playersCount > 0) paidCount.toFloat() / playersCount else 0f
@@ -102,7 +106,9 @@ fun HomeScreen(
                     ratio = paymentRatio, 
                     description = "${(paymentRatio * 100).toInt()}% Collections Completed",
                     unpaidCount = unpaidPlayers.size,
-                    paidCount = paidCount
+                    paidCount = paidCount,
+                    spacing = spacing,
+                    typography = typography
                 )
             }
         }
@@ -110,8 +116,8 @@ fun HomeScreen(
         // 4. Alerts & Reminders
         if (lowAttendance.isNotEmpty() || unpaidPlayers.isNotEmpty()) {
             item(key = "alerts_section") {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    DashboardSectionLabel("Operational Alerts")
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
+                    DashboardSectionLabel("Operational Alerts", typography)
 
                     if (lowAttendance.isNotEmpty()) {
                         AlertCard(
@@ -119,17 +125,19 @@ fun HomeScreen(
                             icon = Icons.Default.Warning,
                             iconColor = Color(0xFFF59E0B),
                             isExpanded = isAttendanceExpanded,
-                            onToggle = { isAttendanceExpanded = !isAttendanceExpanded }
+                            onToggle = { isAttendanceExpanded = !isAttendanceExpanded },
+                            spacing = spacing,
+                            typography = typography
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp)) {
                                 lowAttendance.forEach { (name, percent) ->
                                     val color = if (percent < 50) Color(0xFFEF4444) else Color(0xFFF59E0B)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(), 
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
-                                        Text("$percent%", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = color)
+                                        Text(name, style = TextStyle(fontSize = typography.bodySmall), color = Color(0xFFA1A1AA))
+                                        Text("$percent%", style = TextStyle(fontSize = typography.bodySmall, fontWeight = FontWeight.SemiBold), color = color)
                                     }
                                 }
                             }
@@ -142,14 +150,16 @@ fun HomeScreen(
                             icon = Icons.Default.Info,
                             iconColor = Color(0xFFFF99C1),
                             isExpanded = isDefaultersExpanded,
-                            onToggle = { isDefaultersExpanded = !isDefaultersExpanded }
+                            onToggle = { isDefaultersExpanded = !isDefaultersExpanded },
+                            spacing = spacing,
+                            typography = typography
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp)) {
                                 unpaidPlayers.sortedBy { it.name }.forEach { player ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(modifier = Modifier.size(4.dp).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
-                                        Spacer(Modifier.width(10.dp))
-                                        Text(player.name, style = MaterialTheme.typography.bodySmall, color = Color(0xFFA1A1AA))
+                                        Box(modifier = Modifier.size(spacing.extraSmall).background(Color(0xFFFF99C1), androidx.compose.foundation.shape.CircleShape))
+                                        Spacer(Modifier.width(spacing.small + 2.dp))
+                                        Text(player.name, style = TextStyle(fontSize = typography.bodySmall), color = Color(0xFFA1A1AA))
                                     }
                                 }
                             }
@@ -161,20 +171,24 @@ fun HomeScreen(
 
         // 5. Utility Actions
         item(key = "system_actions") {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DashboardSectionLabel("System")
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
+                DashboardSectionLabel("System", typography)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
                     OperationalButton(
                         text = "Share Data",
                         icon = Icons.Default.Share,
                         onClick = onShare,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        spacing = spacing,
+                        typography = typography
                     )
                     OperationalButton(
                         text = "Sync / Import",
                         icon = Icons.Default.KeyboardArrowDown,
                         onClick = onImport,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        spacing = spacing,
+                        typography = typography
                     )
                 }
             }
@@ -183,32 +197,33 @@ fun HomeScreen(
 }
 
 @Composable
-fun HomeHeader() {
+fun HomeHeader(spacing: DesignSystem.SpacingValues, typography: DesignSystem.TypographyValues) {
     val dateStr = SimpleDateFormat("EEEE, MMMM d", Locale.getDefault()).format(Date())
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = spacing.small)) {
         Text(
             text = "Academy Dashboard",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = 22.sp,
+            style = TextStyle(
+                fontSize = typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.5).sp
             ),
             color = Color.White
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(spacing.extraSmall))
         Text(
             text = dateStr,
-            style = MaterialTheme.typography.bodyMedium,
+            style = TextStyle(fontSize = typography.bodyMedium),
             color = Color(0xFFA1A1AA)
         )
     }
 }
 
 @Composable
-fun DashboardSectionLabel(title: String) {
+fun DashboardSectionLabel(title: String, typography: DesignSystem.TypographyValues) {
     Text(
         text = title.uppercase(), 
-        style = MaterialTheme.typography.labelSmall.copy(
+        style = TextStyle(
+            fontSize = typography.labelSmall,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.2.sp
         ),
@@ -221,7 +236,9 @@ fun AttendanceSummaryCard(
     ratio: Float,
     present: Int,
     total: Int,
-    lastUpdated: String?
+    lastUpdated: String?,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val animatedRatio by animateFloatAsState(
         targetValue = ratio, 
@@ -235,7 +252,7 @@ fun AttendanceSummaryCard(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(spacing.large)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -243,82 +260,82 @@ fun AttendanceSummaryCard(
             ) {
                 Text(
                     text = "Daily Performance",
-                    style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.8f))
+                    style = TextStyle(fontSize = typography.labelMedium, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.8f))
                 )
                 if (lastUpdated != null) {
                     Text(
                         text = "Sync: $lastUpdated",
-                        style = TextStyle(fontSize = 11.sp, color = Color(0xFFA1A1AA))
+                        style = TextStyle(fontSize = typography.labelSmall, color = Color(0xFFA1A1AA))
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(spacing.medium + 4.dp))
 
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = "${(ratio * 100).toInt()}%",
-                    style = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    style = TextStyle(fontSize = (typography.titleLarge.value * 1.8f).sp, fontWeight = FontWeight.Bold, color = Color.White)
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(spacing.small))
                 Text(
                     text = "Attendance Rate",
-                    style = TextStyle(fontSize = 14.sp, color = Color(0xFFA1A1AA)),
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    style = TextStyle(fontSize = typography.bodyMedium, color = Color(0xFFA1A1AA)),
+                    modifier = Modifier.padding(bottom = spacing.small)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(spacing.medium))
 
             LinearProgressIndicator(
                 progress = { animatedRatio },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
+                modifier = Modifier.fillMaxWidth().height(spacing.small),
                 color = Color(0xFFFF99C1),
                 trackColor = Color(0xFF3A2029),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(spacing.large))
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                MetricColumn("Present", "$present", Color(0xFF2CC55E))
-                MetricColumn("Absent", "${total - present}", Color(0xFFEF4444))
-                MetricColumn("Players", "$total", Color.White)
+                MetricColumn("Present", "$present", Color(0xFF2CC55E), typography)
+                MetricColumn("Absent", "${total - present}", Color(0xFFEF4444), typography)
+                MetricColumn("Players", "$total", Color.White, typography)
             }
         }
     }
 }
 
 @Composable
-private fun MetricColumn(label: String, value: String, color: Color) {
+private fun MetricColumn(label: String, value: String, color: Color, typography: DesignSystem.TypographyValues) {
     Column {
-        Text(text = label, style = TextStyle(fontSize = 11.sp, color = Color(0xFFA1A1AA)))
-        Text(text = value, style = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold, color = color))
+        Text(text = label, style = TextStyle(fontSize = typography.labelSmall, color = Color(0xFFA1A1AA)))
+        Text(text = value, style = TextStyle(fontSize = typography.titleMedium, fontWeight = FontWeight.Bold, color = color))
     }
 }
 
 @Composable
-fun StatCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color) {
+fun StatCard(title: String, value: String, modifier: Modifier = Modifier, accentColor: Color, spacing: DesignSystem.SpacingValues, typography: DesignSystem.TypographyValues) {
     Card(
         modifier = modifier, 
         colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = title, style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA)))
-            Spacer(Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(spacing.medium)) {
+            Text(text = title, style = TextStyle(fontSize = typography.labelMedium, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA)))
+            Spacer(Modifier.height(spacing.small))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(6.dp).background(accentColor, androidx.compose.foundation.shape.CircleShape))
-                Spacer(Modifier.width(10.dp))
-                Text(text = value, style = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.White))
+                Box(modifier = Modifier.size(spacing.extraSmall + 2.dp).background(accentColor, androidx.compose.foundation.shape.CircleShape))
+                Spacer(Modifier.width(spacing.small + 2.dp))
+                Text(text = value, style = TextStyle(fontSize = typography.titleLarge.times(1.2f), fontWeight = FontWeight.SemiBold, color = Color.White))
             }
         }
     }
 }
 
 @Composable
-fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaidCount: Int, paidCount: Int) {
+fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaidCount: Int, paidCount: Int, spacing: DesignSystem.SpacingValues, typography: DesignSystem.TypographyValues) {
     val animatedRatio by animateFloatAsState(
         targetValue = ratio, 
         animationSpec = tween(800, easing = FastOutSlowInEasing),
@@ -331,7 +348,7 @@ fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaid
         colors = CardDefaults.cardColors(containerColor = Color(0xFF241117)),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(spacing.medium)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -339,32 +356,32 @@ fun FinancialStatusCard(title: String, ratio: Float, description: String, unpaid
             ) {
                 Text(
                     text = title, 
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA))
+                    style = TextStyle(fontSize = typography.labelMedium, fontWeight = FontWeight.Medium, color = Color(0xFFA1A1AA))
                 )
                 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.small + 4.dp)) {
                     Text(
                         text = "$unpaidCount Unpaid",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFEF4444))
+                        style = TextStyle(fontSize = typography.labelMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFFEF4444))
                     )
                     Text(
                         text = "$paidCount Paid",
-                        style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2CC55E))
+                        style = TextStyle(fontSize = typography.labelMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFF2CC55E))
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(spacing.medium))
             LinearProgressIndicator(
                 progress = { animatedRatio },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
+                modifier = Modifier.fillMaxWidth().height(spacing.small),
                 color = Color(0xFF2CC55E),
                 trackColor = Color(0xFF3A2029),
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(spacing.small + 2.dp))
             Text(
                 text = description, 
-                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                style = TextStyle(fontSize = typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = Color.White)
             )
         }
     }
@@ -377,6 +394,8 @@ fun AlertCard(
     iconColor: Color,
     isExpanded: Boolean,
     onToggle: () -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -386,26 +405,26 @@ fun AlertCard(
         shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(spacing.medium)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Text(text = title, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.White))
+                    Icon(icon, null, tint = iconColor, modifier = Modifier.size(spacing.medium + 2.dp))
+                    Spacer(Modifier.width(spacing.small + 4.dp))
+                    Text(text = title, style = TextStyle(fontSize = typography.bodyMedium, fontWeight = FontWeight.Medium, color = Color.White))
                 }
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
                     tint = Color(0xFFA1A1AA),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(spacing.medium + 4.dp)
                 )
             }
             if (isExpanded) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(spacing.medium))
                 content()
             }
         }
@@ -413,17 +432,17 @@ fun AlertCard(
 }
 
 @Composable
-fun OperationalButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun OperationalButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, spacing: DesignSystem.SpacingValues, typography: DesignSystem.TypographyValues) {
     Button(
         onClick = onClick, 
-        modifier = modifier.height(48.dp), 
+        modifier = modifier.height(DesignSystem.spacing().extraLarge * 1.5f), 
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF241117), contentColor = Color.White),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A2029)),
-        contentPadding = PaddingValues(horizontal = 16.dp)
+        contentPadding = PaddingValues(horizontal = spacing.medium)
     ) {
-        Icon(icon, null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Icon(icon, null, modifier = Modifier.size(spacing.medium + 2.dp))
+        Spacer(Modifier.width(spacing.small))
+        Text(text, style = TextStyle(fontSize = typography.bodySmall, fontWeight = FontWeight.Medium))
     }
 }

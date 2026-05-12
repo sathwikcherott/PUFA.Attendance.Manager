@@ -48,6 +48,9 @@ fun PlayersScreen(
     var selectedBatchFilter by remember { mutableStateOf<Batch?>(null) }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
+    val spacing = DesignSystem.spacing()
+    val typography = DesignSystem.typography()
+
     val filteredPlayers = remember(players, searchQuery, selectedBatchFilter) {
         players.filter { player ->
             val matchesSearch = if (searchQuery.isBlank()) true 
@@ -184,7 +187,9 @@ fun PlayersScreen(
                             fontWeight = FontWeight.Bold
                         ),
                         color = Color.White,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                     
                     Surface(
@@ -203,13 +208,19 @@ fun PlayersScreen(
                     Button(
                         onClick = { showPlayerDialog = true }, 
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.height(40.dp),
+                        modifier = Modifier.height(40.dp).defaultMinSize(minWidth = 80.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF99C1), contentColor = Color(0xFF14090D)),
                         contentPadding = PaddingValues(horizontal = 12.dp)
                     ) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Player", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(
+                            "Player", 
+                            fontWeight = FontWeight.Bold, 
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -292,7 +303,9 @@ fun PlayersScreen(
                                 style = MaterialTheme.typography.bodyLarge, 
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.White,
-                                maxLines = 1
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Text(
                                 text = " · ", 
@@ -416,7 +429,9 @@ fun PlayersScreen(
                             text = batch.name, 
                             style = MaterialTheme.typography.titleMedium, 
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                         Text(
                             text = "$playerCount players enrolled",

@@ -6,9 +6,9 @@ import com.pufamanager.data.entity.Payment
 import com.pufamanager.data.entity.Player
 
 data class SyncSnapshot(
-    val batches: List<Batch>,
-    val players: List<Player>,
-    val attendance: List<Attendance>,
-    val payments: List<Payment>,
+    val batches: List<Batch>? = emptyList(),
+    val players: List<Player>? = emptyList(),
+    val attendance: List<Attendance>? = emptyList(),
+    val payments: List<Payment>? = emptyList(),
     val timestamp: Long = System.currentTimeMillis()
 )

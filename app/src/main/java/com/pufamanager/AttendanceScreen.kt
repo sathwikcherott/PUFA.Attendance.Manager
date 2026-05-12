@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+    import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +39,9 @@ fun AttendanceScreen(
     val primaryText = Color(0xFFFFFFFF)
     val secondaryText = Color(0xFFA1A1AA)
 
+    val spacing = DesignSystem.spacing()
+    val typography = DesignSystem.typography()
+
     var selectedBatch by remember { mutableStateOf(initialBatch ?: batches.firstOrNull()) }
     val attendanceMap = remember { mutableStateMapOf<Int, Boolean?>() }
     
@@ -59,9 +63,9 @@ fun AttendanceScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundDark)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = spacing.horizontalMargin)
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
         
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -71,16 +75,16 @@ fun AttendanceScreen(
             Column {
                 Text(
                     "Mark Attendance",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = 20.sp,
+                    style = TextStyle(
+                        fontSize = typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     ),
                     color = primaryText
                 )
                 Text(
                     todayDate,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp
+                    style = TextStyle(
+                        fontSize = typography.bodySmall
                     ),
                     color = secondaryText
                 )
@@ -102,16 +106,16 @@ fun AttendanceScreen(
                 ) {
                     Text(
                         text = "$derivedPCount / $batchPlayersCount Present",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = TextStyle(fontSize = typography.labelMedium),
                         color = Color(0xFF2CC55E),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = spacing.small, vertical = spacing.extraSmall),
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
         
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
 
         BatchSelector(
             selectedBatch = selectedBatch,
@@ -123,11 +127,11 @@ fun AttendanceScreen(
             showAllOption = false
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
 
         if (selectedBatch == null) {
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("Please create a batch first", style = MaterialTheme.typography.bodyLarge, color = secondaryText)
+                Text("Please create a batch first", style = TextStyle(fontSize = typography.bodyLarge), color = secondaryText)
             }
         } else {
             val batchPlayers = remember(players, selectedBatch) {
@@ -135,13 +139,13 @@ fun AttendanceScreen(
             }
             if (batchPlayers.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Text("No players in this batch", style = MaterialTheme.typography.bodyMedium, color = secondaryText)
+                    Text("No players in this batch", style = TextStyle(fontSize = typography.bodyMedium), color = secondaryText)
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f), 
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp)
+                    verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp),
+                    contentPadding = PaddingValues(vertical = spacing.extraSmall)
                 ) {
                     items(batchPlayers, key = { "att_${it.id}" }) { player ->
                         AttendancePlayerCard(
@@ -149,7 +153,9 @@ fun AttendanceScreen(
                             state = attendanceMap[player.id],
                             onStateChange = { newState ->
                                 attendanceMap[player.id] = newState
-                            }
+                            },
+                            spacing = spacing,
+                            typography = typography
                         )
                     }
                 }
@@ -163,8 +169,8 @@ fun AttendanceScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
-                .height(52.dp),
+                .padding(vertical = spacing.medium)
+                .height(spacing.extraLarge * 1.6f),
             enabled = selectedBatch != null,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
@@ -174,9 +180,9 @@ fun AttendanceScreen(
                 disabledContentColor = secondaryText
             )
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("Save Attendance", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(spacing.medium + 2.dp))
+            Spacer(Modifier.width(spacing.small))
+            Text("Save Attendance", style = TextStyle(fontSize = typography.titleMedium, fontWeight = FontWeight.Bold))
         }
     }
 }
@@ -185,7 +191,9 @@ fun AttendanceScreen(
 fun AttendancePlayerCard(
     player: Player,
     state: Boolean?,
-    onStateChange: (Boolean?) -> Unit
+    onStateChange: (Boolean?) -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val primarySurface = Color(0xFF241117)
     val elevatedSurface = Color(0xFF2A141D)
@@ -203,35 +211,36 @@ fun AttendancePlayerCard(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = spacing.medium, vertical = spacing.small + 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(38.dp),
+                modifier = Modifier.size(spacing.extraLarge + 8.dp),
                 shape = androidx.compose.foundation.shape.CircleShape,
                 color = elevatedSurface
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = player.name.take(1).uppercase(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = TextStyle(fontSize = typography.bodyMedium),
                         fontWeight = FontWeight.Bold,
                         color = accentPink
                     )
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(spacing.small + 4.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = player.name,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 15.sp,
+                    style = TextStyle(
+                        fontSize = typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = primaryText,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 val yearOfBirth = try {
                     player.dateOfBirth.split("/").last()
@@ -240,26 +249,30 @@ fun AttendancePlayerCard(
                 }
                 Text(
                     text = "Born $yearOfBirth",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.sp
+                    style = TextStyle(
+                        fontSize = typography.bodySmall
                     ),
                     color = secondaryText
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
                 AttendanceButton(
                     label = "P",
                     isSelected = state == true,
                     activeColor = successGreen,
-                    onClick = { onStateChange(if (state == true) null else true) }
+                    onClick = { onStateChange(if (state == true) null else true) },
+                    spacing = spacing,
+                    typography = typography
                 )
 
                 AttendanceButton(
                     label = "A",
                     isSelected = state == false,
                     activeColor = dangerRed,
-                    onClick = { onStateChange(if (state == false) null else false) }
+                    onClick = { onStateChange(if (state == false) null else false) },
+                    spacing = spacing,
+                    typography = typography
                 )
             }
         }
@@ -271,7 +284,9 @@ fun AttendanceButton(
     label: String,
     isSelected: Boolean,
     activeColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val elevatedSurface = Color(0xFF2F1219)
     val secondaryText = Color(0xFFA1A1AA)
@@ -289,18 +304,23 @@ fun AttendanceButton(
 
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(height = 36.dp, width = 48.dp),
+        modifier = Modifier
+            .defaultMinSize(minWidth = spacing.extraLarge + 16.dp, minHeight = spacing.extraLarge + 4.dp),
         shape = RoundedCornerShape(10.dp),
         color = bgColor
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.padding(horizontal = spacing.small, vertical = spacing.extraSmall),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontSize = 13.sp,
+                style = TextStyle(
+                    fontSize = typography.labelLarge,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                 ),
-                color = contentColor
+                color = contentColor,
+                maxLines = 1
             )
         }
     }

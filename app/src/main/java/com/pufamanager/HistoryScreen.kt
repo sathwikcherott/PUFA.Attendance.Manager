@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,29 +53,32 @@ fun HistoryScreen(
     var selectedSection by remember { mutableStateOf("Attendance") }
     val sections = listOf("Attendance", "Payments", "Exports")
 
+    val spacing = DesignSystem.spacing()
+    val typography = DesignSystem.typography()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundDark)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = spacing.horizontalMargin),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
         
         Text(
             text = "Activity History",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 20.sp,
+            style = TextStyle(
+                fontSize = typography.titleLarge,
                 fontWeight = FontWeight.Bold
             ),
             color = Color.White,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
+            modifier = Modifier.fillMaxWidth().padding(bottom = spacing.medium)
         )
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 20.dp),
+                .padding(bottom = spacing.medium),
             space = 0.dp
         ) {
             sections.forEachIndexed { index, title ->
@@ -93,10 +97,12 @@ fun HistoryScreen(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontSize = 13.sp,
+                        style = TextStyle(
+                            fontSize = typography.labelLarge,
                             fontWeight = FontWeight.SemiBold
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
             }
@@ -120,7 +126,9 @@ fun HistoryScreen(
                         allAttendance = allAttendance,
                         attendanceDao = attendanceDao,
                         localDeviceId = localDeviceId,
-                        onSave = onSave
+                        onSave = onSave,
+                        spacing = spacing,
+                        typography = typography
                     )
                     "Payments" -> PaymentHistorySection(
                         players = players,
@@ -128,13 +136,17 @@ fun HistoryScreen(
                         allPayments = allPayments,
                         paymentDao = paymentDao,
                         localDeviceId = localDeviceId,
-                        onSave = onSave
+                        onSave = onSave,
+                        spacing = spacing,
+                        typography = typography
                     )
                     "Exports" -> ExportsSection(
                         players = players,
                         batches = batches,
                         allAttendance = allAttendance,
-                        allPayments = allPayments
+                        allPayments = allPayments,
+                        spacing = spacing,
+                        typography = typography
                     )
                 }
             }
@@ -147,7 +159,9 @@ fun ExportsSection(
     players: List<Player>,
     batches: List<Batch>,
     allAttendance: List<Attendance>,
-    allPayments: List<Payment>
+    allPayments: List<Payment>,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val context = LocalContext.current
     val months = remember(allPayments) {
@@ -177,12 +191,12 @@ fun ExportsSection(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp)
+        verticalArrangement = Arrangement.spacedBy(spacing.large),
+        contentPadding = PaddingValues(top = spacing.small, bottom = spacing.extraLarge * 1.5f)
     ) {
         // Attendance Exports Group
         item(key = "group_attendance") {
-            ExportGroup(title = "Attendance Documentation") {
+            ExportGroup(title = "Attendance Documentation", typography) {
                 ExportCard(
                     title = "Monthly Summary",
                     helperText = "Comprehensive attendance table (PDF)",
@@ -207,14 +221,16 @@ fun ExportsSection(
                         } catch (e: Exception) {
                             Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    },
+                    spacing = spacing,
+                    typography = typography
                 )
             }
         }
 
         // Payment Exports Group
         item(key = "group_payments") {
-            ExportGroup(title = "Financial Records") {
+            ExportGroup(title = "Financial Records", typography) {
                 ExportCard(
                     title = "Fee Collection Report",
                     helperText = "Monthly payment status & summaries (PDF)",
@@ -239,14 +255,16 @@ fun ExportsSection(
                         } catch (e: Exception) {
                             Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    },
+                    spacing = spacing,
+                    typography = typography
                 )
             }
         }
 
         // Administrative Exports Group
         item(key = "group_admin") {
-            ExportGroup(title = "Administrative Documentation") {
+            ExportGroup(title = "Administrative Documentation", typography) {
                 ExportCard(
                     title = "Player List",
                     helperText = "Active academy roster by batch (PDF)",
@@ -268,7 +286,9 @@ fun ExportsSection(
                         } catch (e: Exception) {
                             Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                         }
-                    }
+                    },
+                    spacing = spacing,
+                    typography = typography
                 )
             }
         }
@@ -276,11 +296,12 @@ fun ExportsSection(
 }
 
 @Composable
-fun ExportGroup(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+fun ExportGroup(title: String, typography: DesignSystem.TypographyValues, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(DesignSystem.spacing().medium)) {
         Text(
             text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
+            style = TextStyle(
+                fontSize = typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp
             ),
@@ -299,7 +320,9 @@ fun ExportCard(
     batches: List<Batch>,
     months: List<String>,
     showMonth: Boolean,
-    onExport: suspend (Batch?, String?) -> Unit
+    onExport: suspend (Batch?, String?) -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     var selectedBatch by remember { mutableStateOf<Batch?>(null) }
     var selectedMonth by remember { mutableStateOf(months.firstOrNull()) }
@@ -319,22 +342,22 @@ fun ExportCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(spacing.medium),
+            verticalArrangement = Arrangement.spacedBy(spacing.medium)
         ) {
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 15.sp,
+                    style = TextStyle(
+                        fontSize = typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     ),
                     color = Color.White
                 )
                 Text(
                     text = helperText,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.sp
+                    style = TextStyle(
+                        fontSize = typography.bodySmall
                     ),
                     color = secondaryText
                 )
@@ -342,7 +365,7 @@ fun ExportCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(spacing.small)
             ) {
                 BatchSelector(
                     selectedBatch = selectedBatch,
@@ -363,10 +386,18 @@ fun ExportCard(
                             value = selectedMonth ?: "Select Month",
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Month", color = secondaryText) },
+                            label = { 
+                                Text(
+                                    "Month", 
+                                    color = secondaryText,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                ) 
+                            },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
+                            singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
                                 unfocusedTextColor = Color.White,
@@ -374,7 +405,8 @@ fun ExportCard(
                                 unfocusedContainerColor = primarySurface,
                                 focusedBorderColor = dividerColor,
                                 unfocusedBorderColor = dividerColor
-                            )
+                            ),
+                            textStyle = TextStyle(fontSize = typography.bodyMedium)
                         )
                         ExposedDropdownMenu(
                             expanded = monthExpanded,
@@ -383,7 +415,14 @@ fun ExportCard(
                         ) {
                             months.forEach { month ->
                                 DropdownMenuItem(
-                                    text = { Text(month, color = Color.White) },
+                                    text = { 
+                                        Text(
+                                            month, 
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        ) 
+                                    },
                                     onClick = {
                                         selectedMonth = month
                                         monthExpanded = false
@@ -403,7 +442,7 @@ fun ExportCard(
                         isExporting = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(44.dp),
+                modifier = Modifier.fillMaxWidth().height(spacing.extraLarge + 8.dp),
                 shape = RoundedCornerShape(10.dp),
                 enabled = !isExporting,
                 colors = ButtonDefaults.buttonColors(
@@ -414,14 +453,14 @@ fun ExportCard(
             ) {
                 if (isExporting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(spacing.medium + 4.dp),
                         strokeWidth = 2.dp,
                         color = accentPink
                     )
                 } else {
-                    Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp), tint = accentPink)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Generate Official PDF", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Icon(Icons.Default.Share, null, modifier = Modifier.size(spacing.medium + 2.dp), tint = accentPink)
+                    Spacer(Modifier.width(spacing.small))
+                    Text("Generate Official PDF", style = TextStyle(fontSize = typography.bodySmall, fontWeight = FontWeight.SemiBold))
                 }
             }
         }
@@ -436,7 +475,9 @@ fun AttendanceHistorySection(
     allAttendance: List<Attendance>,
     attendanceDao: com.pufamanager.data.dao.AttendanceDao,
     localDeviceId: String,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val primarySurface = Color(0xFF241117)
     val accentPink = Color(0xFFFF99C1)
@@ -493,10 +534,10 @@ fun AttendanceHistorySection(
         }.sortedBy { it.name }
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BatchSelector(
@@ -515,15 +556,15 @@ fun AttendanceHistorySection(
                 colors = CardDefaults.cardColors(containerColor = primarySurface)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
+                    modifier = Modifier.padding(horizontal = spacing.medium, vertical = spacing.small + 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small)
                 ) {
-                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(20.dp), tint = accentPink)
+                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(spacing.medium + 4.dp), tint = accentPink)
                     Text(
                         text = selectedDate,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 13.sp,
+                        style = TextStyle(
+                            fontSize = typography.bodySmall,
                             fontWeight = FontWeight.Medium
                         ),
                         color = Color.White
@@ -553,13 +594,13 @@ fun AttendanceHistorySection(
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp),
+            contentPadding = PaddingValues(bottom = spacing.medium)
         ) {
             if (filteredPlayers.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No records found", style = MaterialTheme.typography.bodyMedium, color = secondaryText)
+                    Box(modifier = Modifier.fillMaxWidth().padding(spacing.extraLarge), contentAlignment = Alignment.Center) {
+                        Text("No records found", style = TextStyle(fontSize = typography.bodyMedium), color = secondaryText)
                     }
                 }
             }
@@ -582,40 +623,46 @@ fun AttendanceHistorySection(
                     border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = spacing.medium, vertical = spacing.small + 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = 15.sp,
+                                style = TextStyle(
+                                    fontSize = typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "Born $yearShort · Batch Member",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontSize = 12.sp
+                                style = TextStyle(
+                                    fontSize = typography.bodySmall
                                 ),
                                 color = secondaryText
                             )
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
                             AttendanceButton(
                                 label = "P",
                                 isSelected = state == true,
                                 activeColor = Color(0xFF2CC55E),
-                                onClick = { pendingAttendance[player.id] = if (state == true) null else true }
+                                onClick = { pendingAttendance[player.id] = if (state == true) null else true },
+                                spacing = spacing,
+                                typography = typography
                             )
 
                             AttendanceButton(
                                 label = "A",
                                 isSelected = state == false,
                                 activeColor = Color(0xFFEF4444),
-                                onClick = { pendingAttendance[player.id] = if (state == false) null else false }
+                                onClick = { pendingAttendance[player.id] = if (state == false) null else false },
+                                spacing = spacing,
+                                typography = typography
                             )
                         }
                     }
@@ -656,13 +703,13 @@ fun AttendanceHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(spacing.extraLarge * 1.6f).padding(bottom = spacing.small + 4.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Confirm Changes", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(spacing.medium + 2.dp))
+                Spacer(Modifier.width(spacing.small))
+                Text("Confirm Changes", style = TextStyle(fontSize = typography.titleMedium, fontWeight = FontWeight.Bold))
             }
         }
     }
@@ -676,7 +723,9 @@ fun PaymentHistorySection(
     allPayments: List<Payment>,
     paymentDao: com.pufamanager.data.dao.PaymentDao,
     localDeviceId: String,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    spacing: DesignSystem.SpacingValues,
+    typography: DesignSystem.TypographyValues
 ) {
     val primarySurface = Color(0xFF241117)
     val elevatedSurface = Color(0xFF2A141D)
@@ -749,10 +798,10 @@ fun PaymentHistorySection(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(spacing.medium)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BatchSelector(
@@ -773,10 +822,18 @@ fun PaymentHistorySection(
                     value = selectedMonth,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Month", color = secondaryText) },
+                    label = { 
+                        Text(
+                            "Month", 
+                            color = secondaryText,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
+                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = monthExpanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
@@ -784,7 +841,8 @@ fun PaymentHistorySection(
                         unfocusedContainerColor = primarySurface,
                         focusedBorderColor = dividerColor,
                         unfocusedBorderColor = dividerColor
-                    )
+                    ),
+                    textStyle = TextStyle(fontSize = typography.bodyMedium)
                 )
                 ExposedDropdownMenu(
                     expanded = monthExpanded,
@@ -793,7 +851,14 @@ fun PaymentHistorySection(
                 ) {
                     months.forEach { month ->
                         DropdownMenuItem(
-                            text = { Text(month, color = Color.White) },
+                            text = { 
+                                Text(
+                                    month, 
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                ) 
+                            },
                             onClick = {
                                 selectedMonth = month
                                 monthExpanded = false
@@ -806,13 +871,13 @@ fun PaymentHistorySection(
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            verticalArrangement = Arrangement.spacedBy(spacing.small + 2.dp),
+            contentPadding = PaddingValues(bottom = spacing.medium)
         ) {
             if (filteredPlayers.isEmpty()) {
                 item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("No records found", style = MaterialTheme.typography.bodyMedium, color = secondaryText)
+                    Box(modifier = Modifier.fillMaxWidth().padding(spacing.extraLarge), contentAlignment = Alignment.Center) {
+                        Text("No records found", style = TextStyle(fontSize = typography.bodyMedium), color = secondaryText)
                     }
                 }
             }
@@ -841,19 +906,21 @@ fun PaymentHistorySection(
                     border = androidx.compose.foundation.BorderStroke(1.dp, dividerColor)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        modifier = Modifier.padding(horizontal = spacing.medium, vertical = spacing.small + 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 player.name,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontSize = 15.sp,
+                                style = TextStyle(
+                                    fontSize = typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = Color.White
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.small)) {
                                 if (player.isExempted) {
                                     Surface(
                                         color = statusColor.copy(alpha = 0.1f),
@@ -861,25 +928,27 @@ fun PaymentHistorySection(
                                     ) {
                                         Text(
                                             "EXEMPT",
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = TextStyle(
+                                                fontSize = typography.labelSmall,
+                                                fontWeight = FontWeight.Bold
+                                            ),
                                             color = statusColor,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            fontWeight = FontWeight.Bold
+                                            modifier = Modifier.padding(horizontal = spacing.extraSmall + 2.dp, vertical = 2.dp)
                                         )
                                     }
                                 } else {
                                     Text(
                                         text = if (isPaid) "Payment Confirmed" else "Pending Payment",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            fontSize = 12.sp
+                                        style = TextStyle(
+                                            fontSize = typography.bodySmall,
+                                            fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
                                         ),
-                                        color = statusColor,
-                                        fontWeight = if (isPaid) FontWeight.Medium else FontWeight.Normal
+                                        color = statusColor
                                     )
                                 }
                                 
                                 Text("·", color = secondaryText)
-                                Text("'${yearShort}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = secondaryText)
+                                Text("'${yearShort}", style = TextStyle(fontSize = typography.bodySmall), color = secondaryText)
                             }
                         }
 
@@ -936,13 +1005,13 @@ fun PaymentHistorySection(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp).padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().height(spacing.extraLarge * 1.6f).padding(bottom = spacing.small + 4.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = accentPink, contentColor = backgroundDark)
             ) {
-                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Confirm Payments", style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(spacing.medium + 2.dp))
+                Spacer(Modifier.width(spacing.small))
+                Text("Confirm Payments", style = TextStyle(fontSize = typography.titleMedium, fontWeight = FontWeight.Bold))
             }
         }
     }

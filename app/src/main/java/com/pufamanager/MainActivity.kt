@@ -38,12 +38,88 @@ import com.pufamanager.data.entity.*
 import com.pufamanager.data.sync.SyncManager
 import com.pufamanager.ui.theme.PUFAAttendanceManagerTheme
 import com.google.gson.Gson
+import com.pufamanager.data.sync.models.BackupWrapper
+import com.pufamanager.ui.components.ImportPreviewDialog
+import android.content.Intent
+import android.net.Uri
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+
+object DesignSystem {
+    @Composable
+    fun spacing(): SpacingValues {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp
+        
+        return when {
+            screenWidth < 360 -> SpacingValues(
+                extraSmall = 4.dp, small = 8.dp, medium = 12.dp, 
+                large = 16.dp, extraLarge = 20.dp, horizontalMargin = 12.dp
+            )
+            screenWidth < 600 -> SpacingValues(
+                extraSmall = 4.dp, small = 8.dp, medium = 16.dp, 
+                large = 24.dp, extraLarge = 32.dp, horizontalMargin = 16.dp
+            )
+            else -> SpacingValues(
+                extraSmall = 8.dp, small = 12.dp, medium = 24.dp, 
+                large = 32.dp, extraLarge = 48.dp, horizontalMargin = 24.dp
+            )
+        }
+    }
+
+    @Composable
+    fun typography(): TypographyValues {
+        val configuration = LocalConfiguration.current
+        val screenWidth = configuration.screenWidthDp
+        
+        val scale = when {
+            screenWidth < 360 -> 0.9f
+            screenWidth < 600 -> 1.0f
+            else -> 1.1f
+        }
+        
+        return TypographyValues(
+            titleLarge = 20.sp * scale,
+            titleMedium = 16.sp * scale,
+            bodyLarge = 16.sp * scale,
+            bodyMedium = 14.sp * scale,
+            bodySmall = 12.sp * scale,
+            labelLarge = 14.sp * scale,
+            labelMedium = 12.sp * scale,
+            labelSmall = 11.sp * scale
+        )
+    }
+
+    data class SpacingValues(
+        val extraSmall: Dp,
+        val small: Dp,
+        val medium: Dp,
+        val large: Dp,
+        val extraLarge: Dp,
+        val horizontalMargin: Dp
+    )
+
+    data class TypographyValues(
+        val titleLarge: TextUnit,
+        val titleMedium: TextUnit,
+        val titleSmall: TextUnit = 14.sp,
+        val bodyLarge: TextUnit,
+        val bodyMedium: TextUnit,
+        val bodySmall: TextUnit,
+        val labelLarge: TextUnit,
+        val labelMedium: TextUnit,
+        val labelSmall: TextUnit
+    )
+}
 
 enum class AppScreen(val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Home("Home", Icons.Default.Home),
@@ -54,11 +130,22 @@ enum class AppScreen(val title: String, val icon: androidx.compose.ui.graphics.v
 }
 
 class MainActivity : ComponentActivity() {
+    private var incomingUriState = mutableStateOf<Uri?>(null)
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        incomingUriState.value = intent?.data
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         loadData()
+        
+        // Initialize incoming URI if app was launched via file open
+        incomingUriState.value = intent?.data
 
         val db = AppDatabase.getDatabase(this)
         val playerDao = db.playerDao()
@@ -78,18 +165,101 @@ class MainActivity : ComponentActivity() {
                 // Persistent selection states
                 var lastSelectedBatch by remember { mutableStateOf<Batch?>(null) }
 
-                var pendingJson by remember { mutableStateOf<String?>(null) }
-                if (pendingJson != null) {
+                var pendingBackup by remember { mutableStateOf<BackupWrapper?>(null) }
+                var pendingLegacyJson by remember { mutableStateOf<String?>(null) }
+
+                fun handleUri(uri: Uri) {
+                    val mimeType = context.contentResolver.getType(uri)
+                    Log.d("PUFA_SYNC", "Incoming URI: $uri")
+                    Log.d("PUFA_SYNC", "Incoming MIME: $mimeType")
+
+                    var fileName = "unknown"
+                    if (uri.scheme == "content") {
+                        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (nameIndex != -1 && cursor.moveToFirst()) {
+                                fileName = cursor.getString(nameIndex)
+                            }
+                        }
+                    } else {
+                        fileName = uri.lastPathSegment ?: "unknown"
+                    }
+                    Log.d("PUFA_SYNC", "Detected Filename: $fileName")
+
+                    if (!fileName.endsWith(".pufa", ignoreCase = true) && !fileName.endsWith(".json", ignoreCase = true)) {
+                        Log.d("PUFA_SYNC", "Ignored: File does not have .pufa or .json extension")
+                        return
+                    }
+
+                    scope.launch {
+                        try {
+                            val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                            if (content != null) {
+                                val backup = syncManager.validateBackup(content)
+                                if (backup != null) {
+                                    Log.d("PUFA_SYNC", "Validated as PUFA backup")
+                                    pendingBackup = backup
+                                } else {
+                                    Log.d("PUFA_SYNC", "Falling back to legacy JSON check")
+                                    pendingLegacyJson = content
+                                }
+                            } else {
+                                Log.e("PUFA_SYNC", "Failed to read content from URI")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("PUFA_SYNC", "Error reading URI", e)
+                            Toast.makeText(context, "Failed to read file", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+
+                // Handle incoming intents
+                LaunchedEffect(incomingUriState.value) {
+                    incomingUriState.value?.let { 
+                        handleUri(it)
+                        incomingUriState.value = null // Consume the URI
+                    }
+                }
+
+                // Handle intent on start
+                LaunchedEffect(Unit) {
+                    // This covers cold starts if incomingUriState hasn't triggered yet
+                    intent?.data?.let { 
+                        if (incomingUriState.value == null) {
+                            Log.d("PUFA_SYNC", "Cold start intent data: $it")
+                            handleUri(it)
+                        }
+                    }
+                }
+
+                if (pendingBackup != null) {
+                    ImportPreviewDialog(
+                        backup = pendingBackup!!,
+                        onConfirm = {
+                            scope.launch {
+                                syncManager.createEmergencyBackup(context)
+                                val success = syncManager.importAndMerge(pendingBackup!!, localDeviceId)
+                                if (success) saveData()
+                                pendingBackup = null
+                                Toast.makeText(context, if (success) "Import Complete!" else "Import Failed", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onDismiss = { pendingBackup = null }
+                    )
+                }
+
+                if (pendingLegacyJson != null) {
                     AlertDialog(
-                        onDismissRequest = { pendingJson = null },
-                        title = { Text("Import & Merge Data?") },
+                        onDismissRequest = { pendingLegacyJson = null },
+                        title = { Text("Import Legacy Data?") },
                         text = { Text("Incoming data will be merged with your existing records. Most recent updates are kept.") },
                         confirmButton = {
                             Button(onClick = {
                                 scope.launch {
-                                    val success = syncManager.importAndMerge(pendingJson!!, localDeviceId)
+                                    syncManager.createEmergencyBackup(context)
+                                    val success = syncManager.importLegacy(pendingLegacyJson!!, localDeviceId)
                                     if (success) saveData()
-                                    pendingJson = null
+                                    pendingLegacyJson = null
                                     Toast.makeText(context, if (success) "Sync Complete!" else "Sync Failed", Toast.LENGTH_SHORT).show()
                                 }
                             }) { 
@@ -97,7 +267,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         dismissButton = { 
-                            TextButton(onClick = { pendingJson = null }) { 
+                            TextButton(onClick = { pendingLegacyJson = null }) { 
                                 Text("Cancel") 
                             } 
                         }
@@ -105,12 +275,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-                            uri?.let {
-                                scope.launch {
-                                    val json = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { r: java.io.BufferedReader -> r.readText() }
-                                    pendingJson = json
-                                }
-                            }
+                    uri?.let { handleUri(it) }
                 }
 
                 // Shared Data
@@ -118,6 +283,11 @@ class MainActivity : ComponentActivity() {
                 val batches by batchDao.getAllBatches().collectAsState(initial = emptyList())
                 val allAttendance by attendanceDao.getAllAttendance().collectAsState(initial = emptyList())
                 val allPayments by paymentDao.getAllPayments().collectAsState(initial = emptyList())
+                
+                val spacing = DesignSystem.spacing()
+                val typography = DesignSystem.typography()
+                
+                Log.d("DesignSystem", "Spacing horizontalMargin: ${spacing.horizontalMargin}")
                 
                 val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
                 val currentMonth = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date())
@@ -130,14 +300,18 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
                     containerColor = Color(0xFF1A0D11),
+                    contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Vertical),
                     bottomBar = {
                         Column {
                             HorizontalDivider(color = Color(0xFF3A2029), thickness = 1.dp)
                             NavigationBar(
                                 containerColor = Color(0xFF1A0D11),
-                                tonalElevation = 0.dp
+                                tonalElevation = 0.dp,
+                                modifier = Modifier.height(DesignSystem.spacing().extraLarge * 2.5f)
                             ) {
                                 AppScreen.entries.forEach { screen ->
                                     NavigationBarItem(
@@ -146,15 +320,19 @@ class MainActivity : ComponentActivity() {
                                         label = { 
                                             Text(
                                                 text = screen.title,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = if (currentScreen == screen) FontWeight.Medium else FontWeight.Normal
+                                                style = TextStyle(
+                                                    fontSize = typography.labelSmall,
+                                                    fontWeight = if (currentScreen == screen) FontWeight.Medium else FontWeight.Normal
+                                                ),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                             ) 
                                         },
                                         icon = {
                                             Icon(
                                                 imageVector = screen.icon,
                                                 contentDescription = screen.title,
-                                                modifier = Modifier.size(22.dp)
+                                                modifier = Modifier.size(DesignSystem.spacing().medium + 6.dp)
                                             )
                                         },
                                         colors = NavigationBarItemDefaults.colors(
@@ -170,7 +348,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                    Box(modifier = Modifier
+                        .padding(innerPadding)
+                        .fillMaxSize()) {
                         AnimatedContent(
                             targetState = currentScreen,
                             transitionSpec = {
@@ -189,23 +369,28 @@ class MainActivity : ComponentActivity() {
                                     onShare = {
                                         scope.launch {
                                             try {
-                                                val json = syncManager.exportJson()
-                                                val file = File(context.cacheDir, "pufa_backup.json")
-                                                file.writeText(json)
+                                                val appVersion = packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+                                                val file = syncManager.exportPufa(context, appVersion)
+                                                
+                                                // Log for debugging
+                                                Log.d("PUFA_SYNC", "Exported file: ${file.absolutePath}, exists: ${file.exists()}")
+
                                                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-                                                val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                                    type = "application/json"
-                                                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                                    // Use application/octet-stream for maximum compatibility with custom extensions
+                                                    type = "application/octet-stream"
+                                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                 }
-                                                context.startActivity(android.content.Intent.createChooser(intent, "Share Data"))
+                                                context.startActivity(Intent.createChooser(intent, "Share PUFA Backup"))
                                             } catch (e: Exception) {
+                                                Log.e("PUFA_SYNC", "Export failed", e)
                                                 Toast.makeText(context, "Export failed", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     },
                                     onImport = { 
-                                        importLauncher.launch("application/json") 
+                                        importLauncher.launch("*/*")
                                     }
                                 )
                                 AppScreen.Attendance -> AttendanceScreen(
@@ -448,12 +633,20 @@ fun BatchSelector(
             value = selectedBatch?.name ?: if (showAllOption) "All Batches" else "Select Batch",
             onValueChange = {},
             readOnly = true,
-            label = { Text(label, color = secondaryText) },
+            label = { 
+                Text(
+                    text = label, 
+                    color = secondaryText,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                ) 
+            },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor()
                 .fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
+            singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = primaryText,
                 unfocusedTextColor = primaryText,
@@ -462,6 +655,10 @@ fun BatchSelector(
                 focusedBorderColor = dividerColor,
                 unfocusedBorderColor = dividerColor,
                 cursorColor = Color(0xFFFF99C1)
+            ),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                color = primaryText
             )
         )
         ExposedDropdownMenu(
@@ -471,7 +668,14 @@ fun BatchSelector(
         ) {
             if (showAllOption) {
                 DropdownMenuItem(
-                    text = { Text("All Batches", color = primaryText) },
+                    text = { 
+                        Text(
+                            "All Batches", 
+                            color = primaryText,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
+                    },
                     onClick = {
                         onBatchSelected(null)
                         expanded = false
@@ -480,7 +684,14 @@ fun BatchSelector(
             }
             batches.forEach { batch ->
                 DropdownMenuItem(
-                    text = { Text(batch.name, color = primaryText) },
+                    text = { 
+                        Text(
+                            batch.name, 
+                            color = primaryText,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
+                    },
                     onClick = {
                         onBatchSelected(batch)
                         expanded = false
