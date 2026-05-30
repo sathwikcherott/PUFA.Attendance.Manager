@@ -1,4 +1,8 @@
-# PUFA Manager Hub
+> [!IMPORTANT]
+> PUFA Manager Hub is feature complete and no longer under active development.
+> See Issue #1 for project status and final notes.
+>
+> # PUFA Manager Hub
 
 PUFA Manager Hub is an Android football academy management app built to simplify player operations, attendance tracking, fee management, and report exports through a clean and structured workflow.
 
